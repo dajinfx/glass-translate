@@ -8,8 +8,8 @@
   window.__glassTranslateInjected = true;
 
   const API_URL = "https://glass-translate-api.onrender.com/api/translate-image";
-  const MIN_WIDTH = 520;
-  const MIN_HEIGHT = 320;
+  const MIN_WIDTH = 360;
+  const MIN_HEIGHT = 120;
   const EDGE_MARGIN = 8;
   const DEFAULT_LANGUAGE_STORAGE_KEY = "glassTranslateDefaultLanguage";
   const DEFAULT_LANGUAGE = "\u4e2d\u6587";
@@ -295,6 +295,7 @@
     await setStoredValue(DEFAULT_LANGUAGE_STORAGE_KEY, defaultLanguage);
     targetLanguageInput.value = defaultLanguage;
     applyToolLanguage(defaultLanguage);
+    settingsPanel.hidden = true;
     status.textContent = activeText().saved;
   });
 
