@@ -2,6 +2,7 @@ import "dotenv/config";
 import express from "express";
 import cors from "cors";
 import { translateImageRouter } from "./routes/translateImage.js";
+import { translateTextRouter } from "./routes/translateText.js";
 
 const app = express();
 const port = Number(process.env.PORT || 3000);
@@ -15,12 +16,13 @@ app.get("/health", (req, res) => {
 });
 
 app.use("/api/translate-image", translateImageRouter);
+app.use("/api/translate-text", translateTextRouter);
 
 app.use((req, res) => {
   res.status(404).json({
     success: false,
     errorCode: "NOT_FOUND",
-    message: "接口不存在"
+    message: "Route not found"
   });
 });
 

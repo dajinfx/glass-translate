@@ -8,14 +8,17 @@
   window.__glassTranslateInjected = true;
 
   const API_URL = "https://glass-translate-api.onrender.com/api/translate-image";
+  const TEXT_API_URL = "https://glass-translate-api.onrender.com/api/translate-text";
   const MIN_WIDTH = 360;
   const MIN_HEIGHT = 120;
   const EDGE_MARGIN = 8;
   const TRANSLATION_PADDING = 12;
   const DEFAULT_LANGUAGE_STORAGE_KEY = "glassTranslateDefaultLanguage";
   const DEFAULT_MODEL_STORAGE_KEY = "glassTranslateDefaultModel";
+  const CAPTURE_MODE_STORAGE_KEY = "glassTranslateCaptureMode";
   const DEFAULT_LANGUAGE = "English";
   const DEFAULT_MODEL = "deepseek";
+  const DEFAULT_CAPTURE_MODE = "text";
 
   const LANGUAGE_OPTIONS = [
     { key: "en", value: "English", label: "English" },
@@ -36,11 +39,13 @@
       settings: "\u8bbe\u7f6e",
       defaultLanguage: "\u9ed8\u8ba4\u8bed\u8a00",
       defaultModel: "\u9ed8\u8ba4\u6a21\u578b",
+      captureMode: "\u622a\u5c4f\u6a21\u5f0f",
       save: "\u4fdd\u5b58",
       saved: "\u5df2\u4fdd\u5b58",
       translating: "\u7ffb\u8bd1\u4e2d...",
       translateFailed: "\u7ffb\u8bd1\u5931\u8d25",
       noText: "\u672a\u8bc6\u522b\u5230\u53ef\u7ffb\u8bd1\u6587\u5b57",
+      noPageText: "\u672a\u627e\u5230\u7f51\u9875\u6587\u672c\uff0c\u8bf7\u5728\u8bbe\u7f6e\u4e2d\u5207\u6362\u5230 OCR",
       screenshotFailed: "\u622a\u56fe\u5931\u8d25",
       canvasFailed: "\u65e0\u6cd5\u521b\u5efa\u622a\u56fe\u753b\u5e03",
       imageLoadFailed: "\u622a\u56fe\u56fe\u7247\u52a0\u8f7d\u5931\u8d25",
@@ -55,11 +60,13 @@
       settings: "Settings",
       defaultLanguage: "Default language",
       defaultModel: "Default model",
+      captureMode: "Capture mode",
       save: "Save",
       saved: "Saved",
       translating: "Translating...",
       translateFailed: "Translation failed",
       noText: "No translatable text found",
+      noPageText: "No page text found. Switch to OCR in Settings.",
       screenshotFailed: "Screenshot failed",
       canvasFailed: "Could not create screenshot canvas",
       imageLoadFailed: "Screenshot image failed to load",
@@ -74,11 +81,13 @@
       settings: "\u8a2d\u5b9a",
       defaultLanguage: "\u65e2\u5b9a\u306e\u8a00\u8a9e",
       defaultModel: "\u65e2\u5b9a\u306e\u30e2\u30c7\u30eb",
+      captureMode: "\u30ad\u30e3\u30d7\u30c1\u30e3\u30e2\u30fc\u30c9",
       save: "\u4fdd\u5b58",
       saved: "\u4fdd\u5b58\u3057\u307e\u3057\u305f",
       translating: "\u7ffb\u8a33\u4e2d...",
       translateFailed: "\u7ffb\u8a33\u306b\u5931\u6557\u3057\u307e\u3057\u305f",
       noText: "\u7ffb\u8a33\u53ef\u80fd\u306a\u30c6\u30ad\u30b9\u30c8\u304c\u898b\u3064\u304b\u308a\u307e\u305b\u3093",
+      noPageText: "\u30da\u30fc\u30b8\u30c6\u30ad\u30b9\u30c8\u304c\u898b\u3064\u304b\u308a\u307e\u305b\u3093\u3002\u8a2d\u5b9a\u3067 OCR \u306b\u5207\u308a\u66ff\u3048\u3066\u304f\u3060\u3055\u3044\u3002",
       screenshotFailed: "\u30b9\u30af\u30ea\u30fc\u30f3\u30b7\u30e7\u30c3\u30c8\u306b\u5931\u6557\u3057\u307e\u3057\u305f",
       canvasFailed: "\u30b9\u30af\u30ea\u30fc\u30f3\u30b7\u30e7\u30c3\u30c8\u7528\u30ad\u30e3\u30f3\u30d0\u30b9\u3092\u4f5c\u6210\u3067\u304d\u307e\u305b\u3093",
       imageLoadFailed: "\u30b9\u30af\u30ea\u30fc\u30f3\u30b7\u30e7\u30c3\u30c8\u753b\u50cf\u306e\u8aad\u307f\u8fbc\u307f\u306b\u5931\u6557\u3057\u307e\u3057\u305f",
@@ -93,11 +102,13 @@
       settings: "\uc124\uc815",
       defaultLanguage: "\uae30\ubcf8 \uc5b8\uc5b4",
       defaultModel: "\uae30\ubcf8 \ubaa8\ub378",
+      captureMode: "\ucea1\ucc98 \ubaa8\ub4dc",
       save: "\uc800\uc7a5",
       saved: "\uc800\uc7a5\ub428",
       translating: "\ubc88\uc5ed \uc911...",
       translateFailed: "\ubc88\uc5ed \uc2e4\ud328",
       noText: "\ubc88\uc5ed\ud560 \ud14d\uc2a4\ud2b8\ub97c \ucc3e\uc9c0 \ubabb\ud588\uc2b5\ub2c8\ub2e4",
+      noPageText: "\ud398\uc774\uc9c0 \ud14d\uc2a4\ud2b8\ub97c \ucc3e\uc9c0 \ubabb\ud588\uc2b5\ub2c8\ub2e4. \uc124\uc815\uc5d0\uc11c OCR\ub85c \ubc14\uafb8\uc138\uc694.",
       screenshotFailed: "\uc2a4\ud06c\ub9b0\uc0f7 \uc2e4\ud328",
       canvasFailed: "\uc2a4\ud06c\ub9b0\uc0f7 \uce94\ubc84\uc2a4\ub97c \ub9cc\ub4e4 \uc218 \uc5c6\uc2b5\ub2c8\ub2e4",
       imageLoadFailed: "\uc2a4\ud06c\ub9b0\uc0f7 \uc774\ubbf8\uc9c0\ub97c \ubd88\ub7ec\uc624\uc9c0 \ubabb\ud588\uc2b5\ub2c8\ub2e4",
@@ -112,11 +123,13 @@
       settings: "Parametres",
       defaultLanguage: "Langue par defaut",
       defaultModel: "Modele par defaut",
+      captureMode: "Mode de capture",
       save: "Enregistrer",
       saved: "Enregistre",
       translating: "Traduction...",
       translateFailed: "Echec de la traduction",
       noText: "Aucun texte traduisible trouve",
+      noPageText: "Aucun texte de page trouve. Passez en OCR dans Parametres.",
       screenshotFailed: "Echec de la capture",
       canvasFailed: "Impossible de creer le canevas",
       imageLoadFailed: "Echec du chargement de l'image",
@@ -131,11 +144,13 @@
       settings: "Einstellungen",
       defaultLanguage: "Standardsprache",
       defaultModel: "Standardmodell",
+      captureMode: "Erfassungsmodus",
       save: "Speichern",
       saved: "Gespeichert",
       translating: "Ubersetzen...",
       translateFailed: "Ubersetzung fehlgeschlagen",
       noText: "Kein ubersetzbarer Text gefunden",
+      noPageText: "Kein Seitentext gefunden. In den Einstellungen auf OCR wechseln.",
       screenshotFailed: "Screenshot fehlgeschlagen",
       canvasFailed: "Screenshot-Canvas konnte nicht erstellt werden",
       imageLoadFailed: "Screenshot-Bild konnte nicht geladen werden",
@@ -150,11 +165,13 @@
       settings: "Configuracion",
       defaultLanguage: "Idioma predeterminado",
       defaultModel: "Modelo predeterminado",
+      captureMode: "Modo de captura",
       save: "Guardar",
       saved: "Guardado",
       translating: "Traduciendo...",
       translateFailed: "Error de traduccion",
       noText: "No se encontro texto traducible",
+      noPageText: "No se encontro texto en la pagina. Cambie a OCR en Configuracion.",
       screenshotFailed: "Error de captura",
       canvasFailed: "No se pudo crear el lienzo",
       imageLoadFailed: "No se pudo cargar la imagen",
@@ -204,6 +221,12 @@
               ${buildModelOptions(DEFAULT_MODEL)}
             </select>
           </div>
+          <div class="settings-field">
+            <label for="glass-capture-mode" data-i18n="captureMode"></label>
+            <select id="glass-capture-mode" class="capture-mode-select">
+              ${buildCaptureModeOptions(DEFAULT_CAPTURE_MODE)}
+            </select>
+          </div>
           <button class="save-settings-button" type="button" data-i18n="save"></button>
         </div>
 
@@ -236,6 +259,7 @@
   const targetLanguageInput = root.querySelector(".target-language");
   const defaultLanguageInput = root.querySelector(".default-language");
   const modelInput = root.querySelector(".model-select");
+  const captureModeInput = root.querySelector(".capture-mode-select");
 
   let dragging = false;
   let resizing = null;
@@ -310,11 +334,14 @@
   saveSettingsButton.addEventListener("click", async () => {
     const defaultLanguage = defaultLanguageInput.value;
     const defaultModel = modelInput.value;
+    const captureMode = captureModeInput.value;
 
     await setStoredValue(DEFAULT_LANGUAGE_STORAGE_KEY, defaultLanguage);
     await setStoredValue(DEFAULT_MODEL_STORAGE_KEY, defaultModel);
+    await setStoredValue(CAPTURE_MODE_STORAGE_KEY, captureMode);
     targetLanguageInput.value = defaultLanguage;
     applyDefaultModel(defaultModel);
+    applyCaptureMode(captureMode);
     applyToolLanguage(defaultLanguage);
     settingsPanel.hidden = true;
     status.textContent = activeText().saved;
@@ -326,19 +353,24 @@
       translationLayer.innerHTML = "";
       glassArea.classList.remove("has-translation");
 
-      const screenshot = await captureVisibleTab();
-      const croppedImage = await cropGlassArea(screenshot);
       const rect = glassArea.getBoundingClientRect();
-
-      const result = await requestTranslation({
-        image: croppedImage,
-        targetLanguage: targetLanguageInput.value,
-        model: modelInput.value,
-        viewport: {
-          width: Math.round(rect.width),
-          height: Math.round(rect.height)
-        }
-      });
+      const viewport = {
+        width: Math.round(rect.width),
+        height: Math.round(rect.height)
+      };
+      const result = captureModeInput.value === "ocr"
+        ? await requestOcrTranslation({
+            image: await cropGlassArea(await captureVisibleTab()),
+            targetLanguage: targetLanguageInput.value,
+            model: modelInput.value,
+            viewport
+          })
+        : await requestTextTranslation({
+            blocks: collectTextBlocksFromGlassArea(),
+            targetLanguage: targetLanguageInput.value,
+            model: modelInput.value,
+            viewport
+          });
 
       if (!result.success) {
         throw new Error(result.message || activeText().translateFailed);
@@ -476,7 +508,7 @@
     });
   }
 
-  async function requestTranslation(payload) {
+  async function requestOcrTranslation(payload) {
     const response = await fetch(API_URL, {
       method: "POST",
       headers: {
@@ -491,6 +523,91 @@
     }
 
     return data;
+  }
+
+  async function requestTextTranslation(payload) {
+    if (!payload.blocks.length) {
+      throw new Error(activeText().noPageText);
+    }
+
+    const response = await fetch(TEXT_API_URL, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify(payload)
+    });
+
+    const data = await response.json().catch(() => null);
+    if (!response.ok) {
+      throw new Error(data?.message || `${activeText().requestFailed}: ${response.status}`);
+    }
+
+    return data;
+  }
+
+  function collectTextBlocksFromGlassArea() {
+    const glassRect = glassArea.getBoundingClientRect();
+    const walker = document.createTreeWalker(
+      document.body,
+      NodeFilter.SHOW_TEXT,
+      {
+        acceptNode(node) {
+          const text = normalizeText(node.nodeValue);
+          if (!text) return NodeFilter.FILTER_REJECT;
+          const parent = node.parentElement;
+          if (!parent || root.contains(parent)) return NodeFilter.FILTER_REJECT;
+          const tagName = parent.tagName?.toLowerCase();
+          if (["script", "style", "noscript", "textarea", "input", "select", "option"].includes(tagName)) {
+            return NodeFilter.FILTER_REJECT;
+          }
+          const style = window.getComputedStyle(parent);
+          if (
+            style.display === "none" ||
+            style.visibility === "hidden" ||
+            Number(style.opacity) === 0
+          ) {
+            return NodeFilter.FILTER_REJECT;
+          }
+          return NodeFilter.FILTER_ACCEPT;
+        }
+      }
+    );
+
+    const blocks = [];
+    let index = 1;
+    let node = walker.nextNode();
+
+    while (node) {
+      const range = document.createRange();
+      range.selectNodeContents(node);
+      const rect = range.getBoundingClientRect();
+      range.detach();
+
+      if (rect.width > 0 && rect.height > 0 && intersects(rect, glassRect)) {
+        const parent = node.parentElement;
+        const style = window.getComputedStyle(parent);
+        const fontSize = parseFloat(style.fontSize) || 16;
+        const lineHeight = parseFloat(style.lineHeight) || fontSize * 1.35;
+
+        blocks.push({
+          id: `text_${index}`,
+          sourceText: normalizeText(node.nodeValue),
+          x: Math.round(rect.left - glassRect.left),
+          y: Math.round(rect.top - glassRect.top),
+          width: Math.round(rect.width),
+          height: Math.round(rect.height),
+          fontSize: Math.round(fontSize),
+          lineHeight: Math.round(lineHeight),
+          align: normalizeAlign(style.textAlign)
+        });
+        index += 1;
+      }
+
+      node = walker.nextNode();
+    }
+
+    return blocks.slice(0, 80);
   }
 
   function renderTranslationBlocks(blocks) {
@@ -533,6 +650,7 @@
   async function loadDefaults() {
     const defaultLanguage = await getStoredValue(DEFAULT_LANGUAGE_STORAGE_KEY);
     const defaultModel = await getStoredValue(DEFAULT_MODEL_STORAGE_KEY);
+    const captureMode = await getStoredValue(CAPTURE_MODE_STORAGE_KEY);
 
     if (defaultLanguage) {
       targetLanguageInput.value = defaultLanguage;
@@ -541,6 +659,7 @@
     }
 
     applyDefaultModel(defaultModel || DEFAULT_MODEL);
+    applyCaptureMode(captureMode || DEFAULT_CAPTURE_MODE);
   }
 
   function applyToolLanguage(language) {
@@ -586,9 +705,26 @@
     }).join("");
   }
 
+  function buildCaptureModeOptions(selectedValue) {
+    const modes = [
+      { value: "text", label: "Text" },
+      { value: "ocr", label: "OCR" }
+    ];
+
+    return modes.map((mode) => {
+      const selected = mode.value === selectedValue ? " selected" : "";
+      return `<option value="${mode.value}"${selected}>${mode.label}</option>`;
+    }).join("");
+  }
+
   function applyDefaultModel(model) {
     const allowedModels = new Set(["deepseek", "gpt", "gemini"]);
     modelInput.value = allowedModels.has(model) ? model : DEFAULT_MODEL;
+  }
+
+  function applyCaptureMode(mode) {
+    const allowedModes = new Set(["text", "ocr"]);
+    captureModeInput.value = allowedModes.has(mode) ? mode : DEFAULT_CAPTURE_MODE;
   }
 
   function normalizeLanguageValue(value) {
@@ -628,6 +764,14 @@
   function normalizeAlign(align) {
     if (["left", "center", "right", "justify"].includes(align)) return align;
     return "left";
+  }
+
+  function normalizeText(text) {
+    return String(text || "").replace(/\s+/g, " ").trim();
+  }
+
+  function intersects(a, b) {
+    return a.right > b.left && a.left < b.right && a.bottom > b.top && a.top < b.bottom;
   }
 
   function toNumber(value, fallback) {
