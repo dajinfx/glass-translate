@@ -5,7 +5,7 @@ import { normalizeBlocks } from "../utils/normalizeBlocks.js";
 
 export async function translateWithGptVision(input) {
   if (!process.env.OPENAI_API_KEY) {
-    throwHttp(500, "MODEL_NOT_CONFIGURED", "OPENAI_API_KEY 未配置");
+    throwHttp(500, "MODEL_NOT_CONFIGURED", "OPENAI_API_KEY is not configured");
   }
 
   const openai = new OpenAI({

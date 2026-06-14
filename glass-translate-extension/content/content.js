@@ -13,7 +13,9 @@
   const EDGE_MARGIN = 8;
   const TRANSLATION_PADDING = 12;
   const DEFAULT_LANGUAGE_STORAGE_KEY = "glassTranslateDefaultLanguage";
+  const DEFAULT_MODEL_STORAGE_KEY = "glassTranslateDefaultModel";
   const DEFAULT_LANGUAGE = "English";
+  const DEFAULT_MODEL = "deepseek";
 
   const LANGUAGE_OPTIONS = [
     { key: "en", value: "English", label: "English" },
@@ -33,6 +35,7 @@
       clear: "\u6e05\u9664",
       settings: "\u8bbe\u7f6e",
       defaultLanguage: "\u9ed8\u8ba4\u8bed\u8a00",
+      defaultModel: "\u9ed8\u8ba4\u6a21\u578b",
       save: "\u4fdd\u5b58",
       saved: "\u5df2\u4fdd\u5b58",
       translating: "\u7ffb\u8bd1\u4e2d...",
@@ -51,6 +54,7 @@
       clear: "Clear",
       settings: "Settings",
       defaultLanguage: "Default language",
+      defaultModel: "Default model",
       save: "Save",
       saved: "Saved",
       translating: "Translating...",
@@ -69,6 +73,7 @@
       clear: "\u30af\u30ea\u30a2",
       settings: "\u8a2d\u5b9a",
       defaultLanguage: "\u65e2\u5b9a\u306e\u8a00\u8a9e",
+      defaultModel: "\u65e2\u5b9a\u306e\u30e2\u30c7\u30eb",
       save: "\u4fdd\u5b58",
       saved: "\u4fdd\u5b58\u3057\u307e\u3057\u305f",
       translating: "\u7ffb\u8a33\u4e2d...",
@@ -87,6 +92,7 @@
       clear: "\uc9c0\uc6b0\uae30",
       settings: "\uc124\uc815",
       defaultLanguage: "\uae30\ubcf8 \uc5b8\uc5b4",
+      defaultModel: "\uae30\ubcf8 \ubaa8\ub378",
       save: "\uc800\uc7a5",
       saved: "\uc800\uc7a5\ub428",
       translating: "\ubc88\uc5ed \uc911...",
@@ -105,6 +111,7 @@
       clear: "Effacer",
       settings: "Parametres",
       defaultLanguage: "Langue par defaut",
+      defaultModel: "Modele par defaut",
       save: "Enregistrer",
       saved: "Enregistre",
       translating: "Traduction...",
@@ -123,6 +130,7 @@
       clear: "Loschen",
       settings: "Einstellungen",
       defaultLanguage: "Standardsprache",
+      defaultModel: "Standardmodell",
       save: "Speichern",
       saved: "Gespeichert",
       translating: "Ubersetzen...",
@@ -141,6 +149,7 @@
       clear: "Limpiar",
       settings: "Configuracion",
       defaultLanguage: "Idioma predeterminado",
+      defaultModel: "Modelo predeterminado",
       save: "Guardar",
       saved: "Guardado",
       translating: "Traduciendo...",
@@ -178,24 +187,23 @@
           </select>
         </div>
 
-        <div class="field">
-          <label for="glass-model" data-i18n="model"></label>
-          <select id="glass-model" class="model-select">
-            <option value="gpt" selected>GPT</option>
-            <option value="gemini">Gemini</option>
-            <option value="deepseek">DeepSeek</option>
-          </select>
-        </div>
-
         <button class="translate-button" title="" aria-label=""></button>
         <button class="clear-button" type="button" data-i18n="clear"></button>
         <button class="settings-button" type="button" data-i18n="settings"></button>
 
         <div class="settings-panel" data-settings-panel hidden>
-          <label for="glass-default-language" data-i18n="defaultLanguage"></label>
-          <select id="glass-default-language" class="default-language">
-            ${buildLanguageOptions(DEFAULT_LANGUAGE)}
-          </select>
+          <div class="settings-field">
+            <label for="glass-default-language" data-i18n="defaultLanguage"></label>
+            <select id="glass-default-language" class="default-language">
+              ${buildLanguageOptions(DEFAULT_LANGUAGE)}
+            </select>
+          </div>
+          <div class="settings-field">
+            <label for="glass-model" data-i18n="defaultModel"></label>
+            <select id="glass-model" class="model-select">
+              ${buildModelOptions(DEFAULT_MODEL)}
+            </select>
+          </div>
           <button class="save-settings-button" type="button" data-i18n="save"></button>
         </div>
 
@@ -235,7 +243,8 @@
   let offsetY = 0;
 
   applyToolLanguage(DEFAULT_LANGUAGE);
-  loadDefaultLanguage();
+  applyDefaultModel(DEFAULT_MODEL);
+  loadDefaults();
 
   glassWindow.addEventListener("mousedown", (event) => {
     const resizeHandle = event.target.closest("[data-resize]");
@@ -300,9 +309,12 @@
 
   saveSettingsButton.addEventListener("click", async () => {
     const defaultLanguage = defaultLanguageInput.value;
+    const defaultModel = modelInput.value;
 
     await setStoredValue(DEFAULT_LANGUAGE_STORAGE_KEY, defaultLanguage);
+    await setStoredValue(DEFAULT_MODEL_STORAGE_KEY, defaultModel);
     targetLanguageInput.value = defaultLanguage;
+    applyDefaultModel(defaultModel);
     applyToolLanguage(defaultLanguage);
     settingsPanel.hidden = true;
     status.textContent = activeText().saved;
@@ -518,13 +530,17 @@
     if (message) status.textContent = message;
   }
 
-  async function loadDefaultLanguage() {
+  async function loadDefaults() {
     const defaultLanguage = await getStoredValue(DEFAULT_LANGUAGE_STORAGE_KEY);
-    if (!defaultLanguage) return;
+    const defaultModel = await getStoredValue(DEFAULT_MODEL_STORAGE_KEY);
 
-    targetLanguageInput.value = defaultLanguage;
-    defaultLanguageInput.value = defaultLanguage;
-    applyToolLanguage(defaultLanguage);
+    if (defaultLanguage) {
+      targetLanguageInput.value = defaultLanguage;
+      defaultLanguageInput.value = defaultLanguage;
+      applyToolLanguage(defaultLanguage);
+    }
+
+    applyDefaultModel(defaultModel || DEFAULT_MODEL);
   }
 
   function applyToolLanguage(language) {
@@ -555,6 +571,24 @@
       const selected = language.value === normalizedSelected ? " selected" : "";
       return `<option value="${language.value}"${selected}>${language.label}</option>`;
     }).join("");
+  }
+
+  function buildModelOptions(selectedValue) {
+    const models = [
+      { value: "deepseek", label: "DeepSeek" },
+      { value: "gpt", label: "GPT" },
+      { value: "gemini", label: "Gemini" }
+    ];
+
+    return models.map((model) => {
+      const selected = model.value === selectedValue ? " selected" : "";
+      return `<option value="${model.value}"${selected}>${model.label}</option>`;
+    }).join("");
+  }
+
+  function applyDefaultModel(model) {
+    const allowedModels = new Set(["deepseek", "gpt", "gemini"]);
+    modelInput.value = allowedModels.has(model) ? model : DEFAULT_MODEL;
   }
 
   function normalizeLanguageValue(value) {
