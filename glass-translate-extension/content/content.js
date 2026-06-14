@@ -12,34 +12,154 @@
   const MIN_HEIGHT = 320;
   const EDGE_MARGIN = 8;
   const DEFAULT_LANGUAGE_STORAGE_KEY = "glassTranslateDefaultLanguage";
+  const DEFAULT_LANGUAGE = "\u4e2d\u6587";
 
-  const text = {
-    language: "\u8bed\u8a00",
-    model: "\u6a21\u578b",
-    chinese: "\u4e2d\u6587",
-    japanese: "\u65e5\u672c\u8bed",
-    korean: "\u97e9\u8bed",
-    translate: "\u7ffb\u8bd1",
-    clear: "\u6e05\u9664",
-    settings: "\u8bbe\u7f6e",
-    defaultLanguage: "\u9ed8\u8ba4\u8bed\u8a00",
-    save: "\u4fdd\u5b58",
-    saved: "\u5df2\u4fdd\u5b58",
-    translating: "\u7ffb\u8bd1\u4e2d...",
-    translateFailed: "\u7ffb\u8bd1\u5931\u8d25",
-    noText: "\u672a\u8bc6\u522b\u5230\u53ef\u7ffb\u8bd1\u6587\u5b57",
-    screenshotFailed: "\u622a\u56fe\u5931\u8d25",
-    canvasFailed: "\u65e0\u6cd5\u521b\u5efa\u622a\u56fe\u753b\u5e03",
-    imageLoadFailed: "\u622a\u56fe\u56fe\u7247\u52a0\u8f7d\u5931\u8d25",
-    requestFailed: "\u670d\u52a1\u8bf7\u6c42\u5931\u8d25",
-    close: "\u5173\u95ed"
+  const LANGUAGE_OPTIONS = [
+    { key: "zh", value: "\u4e2d\u6587", label: "\u4e2d\u6587" },
+    { key: "en", value: "English", label: "English" },
+    { key: "ja", value: "\u65e5\u672c\u8a9e", label: "\u65e5\u672c\u8a9e" },
+    { key: "ko", value: "\ud55c\uad6d\uc5b4", label: "\ud55c\uad6d\uc5b4" },
+    { key: "fr", value: "Fran\u00e7ais", label: "Fran\u00e7ais" },
+    { key: "de", value: "Deutsch", label: "Deutsch" },
+    { key: "es", value: "Espa\u00f1ol", label: "Espa\u00f1ol" }
+  ];
+
+  const I18N = {
+    zh: {
+      language: "\u8bed\u8a00",
+      model: "\u6a21\u578b",
+      translate: "\u7ffb\u8bd1",
+      clear: "\u6e05\u9664",
+      settings: "\u8bbe\u7f6e",
+      defaultLanguage: "\u9ed8\u8ba4\u8bed\u8a00",
+      save: "\u4fdd\u5b58",
+      saved: "\u5df2\u4fdd\u5b58",
+      translating: "\u7ffb\u8bd1\u4e2d...",
+      translateFailed: "\u7ffb\u8bd1\u5931\u8d25",
+      noText: "\u672a\u8bc6\u522b\u5230\u53ef\u7ffb\u8bd1\u6587\u5b57",
+      screenshotFailed: "\u622a\u56fe\u5931\u8d25",
+      canvasFailed: "\u65e0\u6cd5\u521b\u5efa\u622a\u56fe\u753b\u5e03",
+      imageLoadFailed: "\u622a\u56fe\u56fe\u7247\u52a0\u8f7d\u5931\u8d25",
+      requestFailed: "\u670d\u52a1\u8bf7\u6c42\u5931\u8d25",
+      close: "\u5173\u95ed"
+    },
+    en: {
+      language: "Language",
+      model: "Model",
+      translate: "Translate",
+      clear: "Clear",
+      settings: "Settings",
+      defaultLanguage: "Default language",
+      save: "Save",
+      saved: "Saved",
+      translating: "Translating...",
+      translateFailed: "Translation failed",
+      noText: "No translatable text found",
+      screenshotFailed: "Screenshot failed",
+      canvasFailed: "Could not create screenshot canvas",
+      imageLoadFailed: "Screenshot image failed to load",
+      requestFailed: "Service request failed",
+      close: "Close"
+    },
+    ja: {
+      language: "\u8a00\u8a9e",
+      model: "\u30e2\u30c7\u30eb",
+      translate: "\u7ffb\u8a33",
+      clear: "\u30af\u30ea\u30a2",
+      settings: "\u8a2d\u5b9a",
+      defaultLanguage: "\u65e2\u5b9a\u306e\u8a00\u8a9e",
+      save: "\u4fdd\u5b58",
+      saved: "\u4fdd\u5b58\u3057\u307e\u3057\u305f",
+      translating: "\u7ffb\u8a33\u4e2d...",
+      translateFailed: "\u7ffb\u8a33\u306b\u5931\u6557\u3057\u307e\u3057\u305f",
+      noText: "\u7ffb\u8a33\u53ef\u80fd\u306a\u30c6\u30ad\u30b9\u30c8\u304c\u898b\u3064\u304b\u308a\u307e\u305b\u3093",
+      screenshotFailed: "\u30b9\u30af\u30ea\u30fc\u30f3\u30b7\u30e7\u30c3\u30c8\u306b\u5931\u6557\u3057\u307e\u3057\u305f",
+      canvasFailed: "\u30b9\u30af\u30ea\u30fc\u30f3\u30b7\u30e7\u30c3\u30c8\u7528\u30ad\u30e3\u30f3\u30d0\u30b9\u3092\u4f5c\u6210\u3067\u304d\u307e\u305b\u3093",
+      imageLoadFailed: "\u30b9\u30af\u30ea\u30fc\u30f3\u30b7\u30e7\u30c3\u30c8\u753b\u50cf\u306e\u8aad\u307f\u8fbc\u307f\u306b\u5931\u6557\u3057\u307e\u3057\u305f",
+      requestFailed: "\u30b5\u30fc\u30d3\u30b9\u30ea\u30af\u30a8\u30b9\u30c8\u306b\u5931\u6557\u3057\u307e\u3057\u305f",
+      close: "\u9589\u3058\u308b"
+    },
+    ko: {
+      language: "\uc5b8\uc5b4",
+      model: "\ubaa8\ub378",
+      translate: "\ubc88\uc5ed",
+      clear: "\uc9c0\uc6b0\uae30",
+      settings: "\uc124\uc815",
+      defaultLanguage: "\uae30\ubcf8 \uc5b8\uc5b4",
+      save: "\uc800\uc7a5",
+      saved: "\uc800\uc7a5\ub428",
+      translating: "\ubc88\uc5ed \uc911...",
+      translateFailed: "\ubc88\uc5ed \uc2e4\ud328",
+      noText: "\ubc88\uc5ed\ud560 \ud14d\uc2a4\ud2b8\ub97c \ucc3e\uc9c0 \ubabb\ud588\uc2b5\ub2c8\ub2e4",
+      screenshotFailed: "\uc2a4\ud06c\ub9b0\uc0f7 \uc2e4\ud328",
+      canvasFailed: "\uc2a4\ud06c\ub9b0\uc0f7 \uce94\ubc84\uc2a4\ub97c \ub9cc\ub4e4 \uc218 \uc5c6\uc2b5\ub2c8\ub2e4",
+      imageLoadFailed: "\uc2a4\ud06c\ub9b0\uc0f7 \uc774\ubbf8\uc9c0\ub97c \ubd88\ub7ec\uc624\uc9c0 \ubabb\ud588\uc2b5\ub2c8\ub2e4",
+      requestFailed: "\uc11c\ube44\uc2a4 \uc694\uccad \uc2e4\ud328",
+      close: "\ub2eb\uae30"
+    },
+    fr: {
+      language: "Langue",
+      model: "Modele",
+      translate: "Traduire",
+      clear: "Effacer",
+      settings: "Parametres",
+      defaultLanguage: "Langue par defaut",
+      save: "Enregistrer",
+      saved: "Enregistre",
+      translating: "Traduction...",
+      translateFailed: "Echec de la traduction",
+      noText: "Aucun texte traduisible trouve",
+      screenshotFailed: "Echec de la capture",
+      canvasFailed: "Impossible de creer le canevas",
+      imageLoadFailed: "Echec du chargement de l'image",
+      requestFailed: "Echec de la requete",
+      close: "Fermer"
+    },
+    de: {
+      language: "Sprache",
+      model: "Modell",
+      translate: "Ubersetzen",
+      clear: "Loschen",
+      settings: "Einstellungen",
+      defaultLanguage: "Standardsprache",
+      save: "Speichern",
+      saved: "Gespeichert",
+      translating: "Ubersetzen...",
+      translateFailed: "Ubersetzung fehlgeschlagen",
+      noText: "Kein ubersetzbarer Text gefunden",
+      screenshotFailed: "Screenshot fehlgeschlagen",
+      canvasFailed: "Screenshot-Canvas konnte nicht erstellt werden",
+      imageLoadFailed: "Screenshot-Bild konnte nicht geladen werden",
+      requestFailed: "Serviceanfrage fehlgeschlagen",
+      close: "Schliessen"
+    },
+    es: {
+      language: "Idioma",
+      model: "Modelo",
+      translate: "Traducir",
+      clear: "Limpiar",
+      settings: "Configuracion",
+      defaultLanguage: "Idioma predeterminado",
+      save: "Guardar",
+      saved: "Guardado",
+      translating: "Traduciendo...",
+      translateFailed: "Error de traduccion",
+      noText: "No se encontro texto traducible",
+      screenshotFailed: "Error de captura",
+      canvasFailed: "No se pudo crear el lienzo",
+      imageLoadFailed: "No se pudo cargar la imagen",
+      requestFailed: "Error de solicitud",
+      close: "Cerrar"
+    }
   };
+
+  let currentLanguage = DEFAULT_LANGUAGE;
 
   const root = document.createElement("div");
   root.id = "glass-translate-root";
   root.innerHTML = `
     <div class="glass-window" role="dialog" aria-label="Glass Translate">
-      <button class="close-button" type="button" title="${text.close}" aria-label="${text.close}">x</button>
+      <button class="close-button" type="button" title="" aria-label="">x</button>
 
       <div class="glass-area" data-glass-area>
         <div class="translation-layer" data-translation-layer></div>
@@ -47,20 +167,14 @@
 
       <div class="glass-panel">
         <div class="field">
-          <label for="glass-target-language">${text.language}</label>
+          <label for="glass-target-language" data-i18n="language"></label>
           <select id="glass-target-language" class="target-language">
-            <option value="${text.chinese}" selected>${text.chinese}</option>
-            <option value="English">English</option>
-            <option value="${text.japanese}">${text.japanese}</option>
-            <option value="${text.korean}">${text.korean}</option>
-            <option value="Francais">Francais</option>
-            <option value="Deutsch">Deutsch</option>
-            <option value="Espanol">Espanol</option>
+            ${buildLanguageOptions(DEFAULT_LANGUAGE)}
           </select>
         </div>
 
         <div class="field">
-          <label for="glass-model">${text.model}</label>
+          <label for="glass-model" data-i18n="model"></label>
           <select id="glass-model" class="model-select">
             <option value="gpt" selected>GPT</option>
             <option value="gemini">Gemini</option>
@@ -68,22 +182,16 @@
           </select>
         </div>
 
-        <button class="translate-button" title="${text.translate}" aria-label="${text.translate}"></button>
-        <button class="clear-button" type="button">${text.clear}</button>
-        <button class="settings-button" type="button">${text.settings}</button>
+        <button class="translate-button" title="" aria-label=""></button>
+        <button class="clear-button" type="button" data-i18n="clear"></button>
+        <button class="settings-button" type="button" data-i18n="settings"></button>
 
         <div class="settings-panel" data-settings-panel hidden>
-          <label for="glass-default-language">${text.defaultLanguage}</label>
+          <label for="glass-default-language" data-i18n="defaultLanguage"></label>
           <select id="glass-default-language" class="default-language">
-            <option value="${text.chinese}" selected>${text.chinese}</option>
-            <option value="English">English</option>
-            <option value="${text.japanese}">${text.japanese}</option>
-            <option value="${text.korean}">${text.korean}</option>
-            <option value="Francais">Francais</option>
-            <option value="Deutsch">Deutsch</option>
-            <option value="Espanol">Espanol</option>
+            ${buildLanguageOptions(DEFAULT_LANGUAGE)}
           </select>
-          <button class="save-settings-button" type="button">${text.save}</button>
+          <button class="save-settings-button" type="button" data-i18n="save"></button>
         </div>
 
         <div class="status" aria-live="polite"></div>
@@ -121,6 +229,7 @@
   let offsetX = 0;
   let offsetY = 0;
 
+  applyToolLanguage(DEFAULT_LANGUAGE);
   loadDefaultLanguage();
 
   glassWindow.addEventListener("mousedown", (event) => {
@@ -172,6 +281,10 @@
     status.textContent = "";
   });
 
+  targetLanguageInput.addEventListener("change", () => {
+    applyToolLanguage(targetLanguageInput.value);
+  });
+
   settingsButton.addEventListener("click", () => {
     settingsPanel.hidden = !settingsPanel.hidden;
   });
@@ -181,12 +294,13 @@
 
     await setStoredValue(DEFAULT_LANGUAGE_STORAGE_KEY, defaultLanguage);
     targetLanguageInput.value = defaultLanguage;
-    status.textContent = text.saved;
+    applyToolLanguage(defaultLanguage);
+    status.textContent = activeText().saved;
   });
 
   translateButton.addEventListener("click", async () => {
     try {
-      setBusy(true, text.translating);
+      setBusy(true, activeText().translating);
       translationLayer.innerHTML = "";
       glassArea.classList.remove("has-translation");
 
@@ -205,15 +319,15 @@
       });
 
       if (!result.success) {
-        throw new Error(result.message || text.translateFailed);
+        throw new Error(result.message || activeText().translateFailed);
       }
 
       renderTranslationBlocks(result.blocks || []);
       glassArea.classList.toggle("has-translation", Boolean(result.blocks?.length));
-      status.textContent = result.blocks?.length ? "" : text.noText;
+      status.textContent = result.blocks?.length ? "" : activeText().noText;
     } catch (error) {
       console.error(error);
-      status.textContent = error.message || text.translateFailed;
+      status.textContent = error.message || activeText().translateFailed;
     } finally {
       setBusy(false);
     }
@@ -293,7 +407,7 @@
         }
 
         if (!response?.ok) {
-          reject(new Error(response?.error || text.screenshotFailed));
+          reject(new Error(response?.error || activeText().screenshotFailed));
           return;
         }
 
@@ -316,7 +430,7 @@
 
         const ctx = canvas.getContext("2d");
         if (!ctx) {
-          reject(new Error(text.canvasFailed));
+          reject(new Error(activeText().canvasFailed));
           return;
         }
 
@@ -335,7 +449,7 @@
         resolve(canvas.toDataURL("image/png"));
       };
 
-      image.onerror = () => reject(new Error(text.imageLoadFailed));
+      image.onerror = () => reject(new Error(activeText().imageLoadFailed));
       image.src = dataUrl;
     });
   }
@@ -351,7 +465,7 @@
 
     const data = await response.json().catch(() => null);
     if (!response.ok) {
-      throw new Error(data?.message || `${text.requestFailed}: ${response.status}`);
+      throw new Error(data?.message || `${activeText().requestFailed}: ${response.status}`);
     }
 
     return data;
@@ -391,6 +505,46 @@
 
     targetLanguageInput.value = defaultLanguage;
     defaultLanguageInput.value = defaultLanguage;
+    applyToolLanguage(defaultLanguage);
+  }
+
+  function applyToolLanguage(language) {
+    currentLanguage = normalizeLanguageValue(language);
+    const copy = activeText();
+
+    targetLanguageInput.value = currentLanguage;
+    defaultLanguageInput.value = currentLanguage;
+
+    root.querySelectorAll("[data-i18n]").forEach((element) => {
+      element.textContent = copy[element.dataset.i18n] || "";
+    });
+
+    translateButton.title = copy.translate;
+    translateButton.setAttribute("aria-label", copy.translate);
+    closeButton.title = copy.close;
+    closeButton.setAttribute("aria-label", copy.close);
+  }
+
+  function activeText() {
+    return I18N[languageKey(currentLanguage)] || I18N.zh;
+  }
+
+  function buildLanguageOptions(selectedValue) {
+    const normalizedSelected = normalizeLanguageValue(selectedValue);
+
+    return LANGUAGE_OPTIONS.map((language) => {
+      const selected = language.value === normalizedSelected ? " selected" : "";
+      return `<option value="${language.value}"${selected}>${language.label}</option>`;
+    }).join("");
+  }
+
+  function normalizeLanguageValue(value) {
+    const matchingLanguage = LANGUAGE_OPTIONS.find((language) => language.value === value);
+    return matchingLanguage?.value || DEFAULT_LANGUAGE;
+  }
+
+  function languageKey(value) {
+    return LANGUAGE_OPTIONS.find((language) => language.value === value)?.key || "zh";
   }
 
   function getStoredValue(key) {
