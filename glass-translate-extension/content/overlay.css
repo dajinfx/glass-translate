@@ -31,8 +31,31 @@
   box-shadow: 0 18px 50px rgba(0, 0, 0, 0.16);
 }
 
-#glass-translate-root .glass-window.is-dragging {
+#glass-translate-root .glass-window.is-dragging,
+#glass-translate-root .glass-window.is-resizing {
   user-select: none;
+}
+
+#glass-translate-root .close-button {
+  position: absolute;
+  right: 10px;
+  top: 10px;
+  z-index: 3;
+  width: 28px;
+  height: 28px;
+  border: 1px solid #111;
+  background: #fff;
+  color: #111;
+  font-size: 18px;
+  line-height: 24px;
+  font-weight: 700;
+  text-align: center;
+  cursor: pointer;
+}
+
+#glass-translate-root .close-button:hover {
+  background: #111;
+  color: #fff;
 }
 
 #glass-translate-root .glass-area {
@@ -64,7 +87,7 @@
   position: relative;
   flex: 0 0 220px;
   width: 220px;
-  padding: 28px 22px;
+  padding: 52px 22px 28px;
   border-left: 3px solid #111;
   background: #fff;
   cursor: default;
@@ -132,6 +155,76 @@
   color: #555;
   font-size: 13px;
   line-height: 18px;
+}
+
+#glass-translate-root .resize-handle {
+  position: absolute;
+  z-index: 4;
+  background: transparent;
+}
+
+#glass-translate-root .resize-n,
+#glass-translate-root .resize-s {
+  left: 12px;
+  right: 12px;
+  height: 10px;
+  cursor: ns-resize;
+}
+
+#glass-translate-root .resize-n {
+  top: -5px;
+}
+
+#glass-translate-root .resize-s {
+  bottom: -5px;
+}
+
+#glass-translate-root .resize-e,
+#glass-translate-root .resize-w {
+  top: 12px;
+  bottom: 12px;
+  width: 10px;
+  cursor: ew-resize;
+}
+
+#glass-translate-root .resize-e {
+  right: -5px;
+}
+
+#glass-translate-root .resize-w {
+  left: -5px;
+}
+
+#glass-translate-root .resize-ne,
+#glass-translate-root .resize-nw,
+#glass-translate-root .resize-se,
+#glass-translate-root .resize-sw {
+  width: 18px;
+  height: 18px;
+}
+
+#glass-translate-root .resize-ne {
+  right: -7px;
+  top: -7px;
+  cursor: nesw-resize;
+}
+
+#glass-translate-root .resize-nw {
+  left: -7px;
+  top: -7px;
+  cursor: nwse-resize;
+}
+
+#glass-translate-root .resize-se {
+  right: -7px;
+  bottom: -7px;
+  cursor: nwse-resize;
+}
+
+#glass-translate-root .resize-sw {
+  left: -7px;
+  bottom: -7px;
+  cursor: nesw-resize;
 }
 
 @keyframes glass-pulse {
