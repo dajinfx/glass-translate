@@ -1,0 +1,15 @@
+{
+  "manifest_version": 3,
+  "name": "Glass Translate",
+  "version": "0.1.0",
+  "description": "Translate text from webpages, images, and PDFs with a glass-like AI vision window.",
+  "permissions": ["activeTab", "tabs", "scripting"],
+  "host_permissions": ["<all_urls>", "http://localhost:3000/*"],
+  "background": {
+    "service_worker": "background.js"
+  },
+  "action": {
+    "default_title": "Glass Translate",
+    "default_icon": "assets/glass-icon.svg"
+  }
+}
