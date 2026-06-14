@@ -75,7 +75,8 @@
   position: absolute;
   inset: 0;
   pointer-events: auto;
-  user-select: text;
+  user-select: text !important;
+  -webkit-user-select: text !important;
   cursor: text;
 }
 
@@ -88,7 +89,9 @@
   overflow-wrap: break-word;
   font-weight: 500;
   text-shadow: 0 1px 0 rgba(255, 255, 255, 0.7);
-  user-select: text;
+  cursor: text;
+  user-select: text !important;
+  -webkit-user-select: text !important;
 }
 
 #glass-translate-root .glass-panel {

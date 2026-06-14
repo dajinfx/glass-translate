@@ -239,6 +239,10 @@
       return;
     }
 
+    if (event.target.closest(".translation-block") || event.target.closest(".translation-layer")) {
+      return;
+    }
+
     if (event.target.closest("select") || event.target.closest("button")) return;
 
     dragging = true;
