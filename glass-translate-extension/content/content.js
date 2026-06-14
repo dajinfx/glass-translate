@@ -11,6 +11,7 @@
   const MIN_WIDTH = 360;
   const MIN_HEIGHT = 120;
   const EDGE_MARGIN = 8;
+  const TRANSLATION_PADDING = 12;
   const DEFAULT_LANGUAGE_STORAGE_KEY = "glassTranslateDefaultLanguage";
   const DEFAULT_LANGUAGE = "\u4e2d\u6587";
 
@@ -478,16 +479,25 @@
 
   function renderTranslationBlocks(blocks) {
     translationLayer.innerHTML = "";
+    const layerWidth = Math.max(0, glassArea.clientWidth - TRANSLATION_PADDING * 2);
+    const layerHeight = Math.max(0, glassArea.clientHeight - TRANSLATION_PADDING * 2);
 
     for (const block of blocks) {
       const el = document.createElement("div");
       el.className = "translation-block";
       el.textContent = block.translatedText || "";
+      const left = clamp(toNumber(block.x, 0), 0, layerWidth);
+      const top = clamp(toNumber(block.y, 0), 0, layerHeight);
+      const width = clamp(
+        toNumber(block.width, 120),
+        24,
+        Math.max(24, layerWidth - left)
+      );
 
       Object.assign(el.style, {
-        left: `${toNumber(block.x, 0)}px`,
-        top: `${toNumber(block.y, 0)}px`,
-        width: `${Math.max(toNumber(block.width, 120), 24)}px`,
+        left: `${TRANSLATION_PADDING + left}px`,
+        top: `${TRANSLATION_PADDING + top}px`,
+        width: `${width}px`,
         minHeight: `${Math.max(toNumber(block.height, 24), 18)}px`,
         fontSize: `${clamp(toNumber(block.fontSize, 16), 10, 48)}px`,
         lineHeight: `${clamp(toNumber(block.lineHeight, 22), 12, 64)}px`,

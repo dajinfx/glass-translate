@@ -82,7 +82,7 @@
 
 #glass-translate-root .translation-block {
   position: absolute;
-  padding: 1px 3px;
+  padding: 2px 4px;
   color: #111;
   background: transparent;
   white-space: pre-wrap;
@@ -133,6 +133,7 @@
   position: absolute;
   right: 167px;
   top: 12px;
+  z-index: 5;
   width: 28px;
   height: 28px;
   border: none;
