@@ -29,7 +29,7 @@ export function parseModelJson(text) {
 }
 
 function throwJsonError() {
-  const error = new Error("模型返回 JSON 解析失败");
+  const error = new Error("Model returned invalid JSON");
   error.status = 502;
   error.code = "JSON_PARSE_FAILED";
   throw error;
