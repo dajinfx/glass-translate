@@ -356,11 +356,12 @@
       glassArea.classList.remove("has-translation");
 
       const rect = glassArea.getBoundingClientRect();
+      const captureMode = captureModeInput.value;
       const viewport = {
         width: Math.round(rect.width),
         height: Math.round(rect.height)
       };
-      const result = captureModeInput.value === "ocr"
+      const result = captureMode === "ocr"
         ? await requestOcrTranslation({
             image: await cropGlassArea(await captureVisibleTab()),
             targetLanguage: targetLanguageInput.value,
@@ -378,7 +379,7 @@
         throw new Error(result.message || activeText().translateFailed);
       }
 
-      renderTranslationBlocks(result.blocks || []);
+      renderTranslationBlocks(result.blocks || [], captureMode);
       glassArea.classList.toggle("has-translation", Boolean(result.blocks?.length));
       status.textContent = result.blocks?.length ? "" : activeText().noText;
     } catch (error) {
@@ -576,7 +577,7 @@
       }
     );
 
-    const blocks = [];
+    const rawBlocks = [];
     let index = 1;
     let node = walker.nextNode();
 
@@ -592,7 +593,7 @@
         const fontSize = parseFloat(style.fontSize) || 16;
         const lineHeight = parseFloat(style.lineHeight) || fontSize * 1.35;
 
-        blocks.push({
+        rawBlocks.push({
           id: `text_${index}`,
           sourceText: normalizeText(node.nodeValue),
           x: Math.round(rect.left - glassRect.left),
@@ -609,11 +610,18 @@
       node = walker.nextNode();
     }
 
-    return blocks.slice(0, 80);
+    return mergeTextBlocksIntoLines(rawBlocks).slice(0, 80);
   }
 
-  function renderTranslationBlocks(blocks) {
+  function renderTranslationBlocks(blocks, mode = "ocr") {
     translationLayer.innerHTML = "";
+
+    if (mode === "text") {
+      renderFlowTranslationBlocks(blocks);
+      return;
+    }
+
+    translationLayer.classList.remove("is-flow");
     const layerWidth = Math.max(0, glassArea.clientWidth - TRANSLATION_PADDING * 2);
     const layerHeight = Math.max(0, glassArea.clientHeight - TRANSLATION_PADDING * 2);
     const visibleBlocks = normalizeRenderedBlockPositions(blocks, layerWidth, layerHeight);
@@ -645,6 +653,57 @@
 
       translationLayer.appendChild(el);
     }
+  }
+
+  function renderFlowTranslationBlocks(blocks) {
+    translationLayer.classList.add("is-flow");
+    const visibleBlocks = (Array.isArray(blocks) ? blocks : [])
+      .filter((block) => isMeaningfulText(block?.translatedText || block?.sourceText))
+      .sort((a, b) => toNumber(a.y, 0) - toNumber(b.y, 0) || toNumber(a.x, 0) - toNumber(b.x, 0));
+
+    for (const block of visibleBlocks) {
+      const el = document.createElement("div");
+      el.className = "translation-block translation-block-flow";
+      el.textContent = block.translatedText || "";
+      el.style.fontSize = `${clamp(toNumber(block.fontSize, 16), 12, 24)}px`;
+      el.style.lineHeight = "1.55";
+      translationLayer.appendChild(el);
+    }
+  }
+
+  function mergeTextBlocksIntoLines(blocks) {
+    const meaningfulBlocks = blocks
+      .filter((block) => isMeaningfulText(block.sourceText))
+      .sort((a, b) => a.y - b.y || a.x - b.x);
+    const lines = [];
+
+    for (const block of meaningfulBlocks) {
+      const last = lines[lines.length - 1];
+      const sameLine = last && Math.abs(block.y - last.y) <= Math.max(8, last.lineHeight * 0.45);
+
+      if (!sameLine) {
+        lines.push({ ...block });
+        continue;
+      }
+
+      const gap = block.x - (last.x + last.width);
+      if (gap > 80) {
+        lines.push({ ...block });
+        continue;
+      }
+
+      last.sourceText = `${last.sourceText} ${block.sourceText}`.trim();
+      const right = Math.max(last.x + last.width, block.x + block.width);
+      last.width = right - last.x;
+      last.height = Math.max(last.height, block.height);
+      last.fontSize = Math.max(last.fontSize, block.fontSize);
+      last.lineHeight = Math.max(last.lineHeight, block.lineHeight);
+    }
+
+    return lines.map((line, index) => ({
+      ...line,
+      id: `text_${index + 1}`
+    }));
   }
 
   function normalizeRenderedBlockPositions(blocks, layerWidth, layerHeight) {
@@ -791,6 +850,32 @@
 
   function normalizeText(text) {
     return String(text || "").replace(/\s+/g, " ").trim();
+  }
+
+  function isMeaningfulText(text) {
+    const normalized = normalizeText(text);
+    if (!normalized) return false;
+    if (/^[\d.,\s]+$/.test(normalized)) return false;
+    if (normalized.length <= 1) return false;
+
+    const lower = normalized.toLowerCase();
+    const uiTexts = new Set([
+      "reply",
+      "replies",
+      "like",
+      "likes",
+      "dislike",
+      "share",
+      "save",
+      "more",
+      "\ub2f5\uae00",
+      "\uc88b\uc544\uc694",
+      "\uacf5\uc720",
+      "\uc800\uc7a5",
+      "\ub354\ubcf4\uae30"
+    ]);
+
+    return !uiTexts.has(lower);
   }
 
   function intersects(a, b) {
