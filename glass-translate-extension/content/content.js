@@ -12,7 +12,9 @@
   const MIN_WIDTH = 360;
   const MIN_HEIGHT = 120;
   const EDGE_MARGIN = 8;
-  const TRANSLATION_PADDING = 12;
+  const TRANSLATION_PADDING = 14;
+  const TRANSLATE_BUTTON_SAFE_WIDTH = 72;
+  const TRANSLATE_BUTTON_SAFE_HEIGHT = 54;
   const DEFAULT_LANGUAGE_STORAGE_KEY = "glassTranslateDefaultLanguage";
   const DEFAULT_MODEL_STORAGE_KEY = "glassTranslateDefaultModel";
   const CAPTURE_MODE_STORAGE_KEY = "glassTranslateCaptureMode";
@@ -614,17 +616,21 @@
     translationLayer.innerHTML = "";
     const layerWidth = Math.max(0, glassArea.clientWidth - TRANSLATION_PADDING * 2);
     const layerHeight = Math.max(0, glassArea.clientHeight - TRANSLATION_PADDING * 2);
+    const visibleBlocks = normalizeRenderedBlockPositions(blocks, layerWidth, layerHeight);
 
-    for (const block of blocks) {
+    for (const block of visibleBlocks) {
       const el = document.createElement("div");
       el.className = "translation-block";
       el.textContent = block.translatedText || "";
       const left = clamp(toNumber(block.x, 0), 0, layerWidth);
       const top = clamp(toNumber(block.y, 0), 0, layerHeight);
+      const maxWidth = top < TRANSLATE_BUTTON_SAFE_HEIGHT
+        ? Math.max(24, layerWidth - left - TRANSLATE_BUTTON_SAFE_WIDTH)
+        : Math.max(24, layerWidth - left);
       const width = clamp(
         toNumber(block.width, 120),
         24,
-        Math.max(24, layerWidth - left)
+        maxWidth
       );
 
       Object.assign(el.style, {
@@ -639,6 +645,23 @@
 
       translationLayer.appendChild(el);
     }
+  }
+
+  function normalizeRenderedBlockPositions(blocks, layerWidth, layerHeight) {
+    const visibleBlocks = (Array.isArray(blocks) ? blocks : []).filter((block) => {
+      return normalizeText(block?.translatedText || block?.sourceText);
+    });
+
+    if (!visibleBlocks.length) return [];
+
+    const minX = Math.min(...visibleBlocks.map((block) => clamp(toNumber(block.x, 0), 0, layerWidth)));
+    const minY = Math.min(...visibleBlocks.map((block) => clamp(toNumber(block.y, 0), 0, layerHeight)));
+
+    return visibleBlocks.map((block) => ({
+      ...block,
+      x: Math.max(0, toNumber(block.x, 0) - minX),
+      y: Math.max(0, toNumber(block.y, 0) - minY)
+    }));
   }
 
   function setBusy(isBusy, message = "") {
