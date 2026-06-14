@@ -31,9 +31,6 @@
       translate: "\u7ffb\u8bd1",
       clear: "\u6e05\u9664",
       settings: "\u8bbe\u7f6e",
-      copy: "\u590d\u5236",
-      copied: "\u5df2\u590d\u5236",
-      nothingToCopy: "\u6ca1\u6709\u53ef\u590d\u5236\u7684\u8bd1\u6587",
       defaultLanguage: "\u9ed8\u8ba4\u8bed\u8a00",
       save: "\u4fdd\u5b58",
       saved: "\u5df2\u4fdd\u5b58",
@@ -52,9 +49,6 @@
       translate: "Translate",
       clear: "Clear",
       settings: "Settings",
-      copy: "Copy",
-      copied: "Copied",
-      nothingToCopy: "No translation to copy",
       defaultLanguage: "Default language",
       save: "Save",
       saved: "Saved",
@@ -73,9 +67,6 @@
       translate: "\u7ffb\u8a33",
       clear: "\u30af\u30ea\u30a2",
       settings: "\u8a2d\u5b9a",
-      copy: "\u30b3\u30d4\u30fc",
-      copied: "\u30b3\u30d4\u30fc\u3057\u307e\u3057\u305f",
-      nothingToCopy: "\u30b3\u30d4\u30fc\u3059\u308b\u7ffb\u8a33\u304c\u3042\u308a\u307e\u305b\u3093",
       defaultLanguage: "\u65e2\u5b9a\u306e\u8a00\u8a9e",
       save: "\u4fdd\u5b58",
       saved: "\u4fdd\u5b58\u3057\u307e\u3057\u305f",
@@ -94,9 +85,6 @@
       translate: "\ubc88\uc5ed",
       clear: "\uc9c0\uc6b0\uae30",
       settings: "\uc124\uc815",
-      copy: "\ubcf5\uc0ac",
-      copied: "\ubcf5\uc0ac\ub428",
-      nothingToCopy: "\ubcf5\uc0ac\ud560 \ubc88\uc5ed\uc774 \uc5c6\uc2b5\ub2c8\ub2e4",
       defaultLanguage: "\uae30\ubcf8 \uc5b8\uc5b4",
       save: "\uc800\uc7a5",
       saved: "\uc800\uc7a5\ub428",
@@ -115,9 +103,6 @@
       translate: "Traduire",
       clear: "Effacer",
       settings: "Parametres",
-      copy: "Copier",
-      copied: "Copie",
-      nothingToCopy: "Aucune traduction a copier",
       defaultLanguage: "Langue par defaut",
       save: "Enregistrer",
       saved: "Enregistre",
@@ -136,9 +121,6 @@
       translate: "Ubersetzen",
       clear: "Loschen",
       settings: "Einstellungen",
-      copy: "Kopieren",
-      copied: "Kopiert",
-      nothingToCopy: "Keine Ubersetzung zum Kopieren",
       defaultLanguage: "Standardsprache",
       save: "Speichern",
       saved: "Gespeichert",
@@ -157,9 +139,6 @@
       translate: "Traducir",
       clear: "Limpiar",
       settings: "Configuracion",
-      copy: "Copiar",
-      copied: "Copiado",
-      nothingToCopy: "No hay traduccion para copiar",
       defaultLanguage: "Idioma predeterminado",
       save: "Guardar",
       saved: "Guardado",
@@ -205,7 +184,6 @@
 
         <button class="translate-button" title="" aria-label=""></button>
         <button class="clear-button" type="button" data-i18n="clear"></button>
-        <button class="copy-button" type="button" data-i18n="copy" disabled></button>
         <button class="settings-button" type="button" data-i18n="settings"></button>
 
         <div class="settings-panel" data-settings-panel hidden>
@@ -236,7 +214,6 @@
   const glassArea = root.querySelector("[data-glass-area]");
   const translateButton = root.querySelector(".translate-button");
   const clearButton = root.querySelector(".clear-button");
-  const copyButton = root.querySelector(".copy-button");
   const closeButton = root.querySelector(".close-button");
   const settingsButton = root.querySelector(".settings-button");
   const saveSettingsButton = root.querySelector(".save-settings-button");
@@ -251,7 +228,6 @@
   let resizing = null;
   let offsetX = 0;
   let offsetY = 0;
-  let lastTranslationBlocks = [];
 
   applyToolLanguage(DEFAULT_LANGUAGE);
   loadDefaultLanguage();
@@ -302,21 +278,7 @@
   clearButton.addEventListener("click", () => {
     translationLayer.innerHTML = "";
     glassArea.classList.remove("has-translation");
-    lastTranslationBlocks = [];
-    copyButton.disabled = true;
     status.textContent = "";
-  });
-
-  copyButton.addEventListener("click", async () => {
-    const copiedText = buildCopiedTranslationText();
-
-    if (!copiedText) {
-      status.textContent = activeText().nothingToCopy;
-      return;
-    }
-
-    await copyTextToClipboard(copiedText);
-    status.textContent = activeText().copied;
   });
 
   targetLanguageInput.addEventListener("change", () => {
@@ -342,8 +304,6 @@
       setBusy(true, activeText().translating);
       translationLayer.innerHTML = "";
       glassArea.classList.remove("has-translation");
-      lastTranslationBlocks = [];
-      copyButton.disabled = true;
 
       const screenshot = await captureVisibleTab();
       const croppedImage = await cropGlassArea(screenshot);
@@ -364,10 +324,8 @@
       }
 
       renderTranslationBlocks(result.blocks || []);
-      lastTranslationBlocks = Array.isArray(result.blocks) ? result.blocks : [];
-      copyButton.disabled = !lastTranslationBlocks.length;
-      glassArea.classList.toggle("has-translation", Boolean(lastTranslationBlocks.length));
-      status.textContent = lastTranslationBlocks.length ? "" : activeText().noText;
+      glassArea.classList.toggle("has-translation", Boolean(result.blocks?.length));
+      status.textContent = result.blocks?.length ? "" : activeText().noText;
     } catch (error) {
       console.error(error);
       status.textContent = error.message || activeText().translateFailed;
@@ -457,36 +415,6 @@
         resolve(response.dataUrl);
       });
     });
-  }
-
-  function buildCopiedTranslationText() {
-    return [...lastTranslationBlocks]
-      .sort((a, b) => {
-        const yDiff = toNumber(a.y, 0) - toNumber(b.y, 0);
-        if (Math.abs(yDiff) > 8) return yDiff;
-        return toNumber(a.x, 0) - toNumber(b.x, 0);
-      })
-      .map((block) => String(block.translatedText || "").trim())
-      .filter(Boolean)
-      .join("\n\n");
-  }
-
-  async function copyTextToClipboard(value) {
-    if (navigator.clipboard?.writeText) {
-      await navigator.clipboard.writeText(value);
-      return;
-    }
-
-    const textarea = document.createElement("textarea");
-    textarea.value = value;
-    textarea.style.position = "fixed";
-    textarea.style.left = "-9999px";
-    textarea.style.top = "-9999px";
-    document.body.appendChild(textarea);
-    textarea.focus();
-    textarea.select();
-    document.execCommand("copy");
-    textarea.remove();
   }
 
   function cropGlassArea(dataUrl) {
