@@ -13,11 +13,11 @@
   const EDGE_MARGIN = 8;
   const TRANSLATION_PADDING = 12;
   const DEFAULT_LANGUAGE_STORAGE_KEY = "glassTranslateDefaultLanguage";
-  const DEFAULT_LANGUAGE = "\u4e2d\u6587";
+  const DEFAULT_LANGUAGE = "English";
 
   const LANGUAGE_OPTIONS = [
-    { key: "zh", value: "\u4e2d\u6587", label: "\u4e2d\u6587" },
     { key: "en", value: "English", label: "English" },
+    { key: "zh", value: "\u4e2d\u6587", label: "\u4e2d\u6587" },
     { key: "ja", value: "\u65e5\u672c\u8a9e", label: "\u65e5\u672c\u8a9e" },
     { key: "ko", value: "\ud55c\uad6d\uc5b4", label: "\ud55c\uad6d\uc5b4" },
     { key: "fr", value: "Fran\u00e7ais", label: "Fran\u00e7ais" },
@@ -160,7 +160,11 @@
   root.id = "glass-translate-root";
   root.innerHTML = `
     <div class="glass-window" role="dialog" aria-label="Glass Translate">
-      <button class="close-button" type="button" title="" aria-label="">x</button>
+      <button class="close-button" type="button" title="" aria-label="">
+        <svg viewBox="0 0 24 24" aria-hidden="true">
+          <path d="M18 6 6 18M6 6l12 12"></path>
+        </svg>
+      </button>
 
       <div class="glass-area" data-glass-area>
         <div class="translation-layer" data-translation-layer></div>
