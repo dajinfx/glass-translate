@@ -7,7 +7,7 @@
 
   window.__glassTranslateInjected = true;
 
-  const API_URL = "http://localhost:3000/api/translate-image";
+  const API_URL = "https://glass-translate-api.onrender.com/api/translate-image";
 
   const root = document.createElement("div");
   root.id = "glass-translate-root";
