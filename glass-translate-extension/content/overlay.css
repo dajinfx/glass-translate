@@ -64,6 +64,11 @@
   min-width: 300px;
   background: rgba(255, 255, 255, 0.05);
   overflow: hidden;
+  transition: background-color 120ms ease;
+}
+
+#glass-translate-root .glass-area.has-translation {
+  background: #fff;
 }
 
 #glass-translate-root .translation-layer {
@@ -76,7 +81,7 @@
   position: absolute;
   padding: 1px 3px;
   color: #111;
-  background: rgba(255, 255, 255, 0.94);
+  background: transparent;
   white-space: pre-wrap;
   overflow-wrap: break-word;
   font-weight: 500;

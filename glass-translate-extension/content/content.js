@@ -141,6 +141,7 @@
 
   clearButton.addEventListener("click", () => {
     translationLayer.innerHTML = "";
+    glassArea.classList.remove("has-translation");
     status.textContent = "";
   });
 
@@ -148,6 +149,7 @@
     try {
       setBusy(true, text.translating);
       translationLayer.innerHTML = "";
+      glassArea.classList.remove("has-translation");
 
       const screenshot = await captureVisibleTab();
       const croppedImage = await cropGlassArea(screenshot);
@@ -168,6 +170,7 @@
       }
 
       renderTranslationBlocks(result.blocks || []);
+      glassArea.classList.toggle("has-translation", Boolean(result.blocks?.length));
       status.textContent = result.blocks?.length ? "" : text.noText;
     } catch (error) {
       console.error(error);
