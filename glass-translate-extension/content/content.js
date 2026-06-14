@@ -11,6 +11,7 @@
   const MIN_WIDTH = 520;
   const MIN_HEIGHT = 320;
   const EDGE_MARGIN = 8;
+  const DEFAULT_LANGUAGE_STORAGE_KEY = "glassTranslateDefaultLanguage";
 
   const text = {
     language: "\u8bed\u8a00",
@@ -20,6 +21,10 @@
     korean: "\u97e9\u8bed",
     translate: "\u7ffb\u8bd1",
     clear: "\u6e05\u9664",
+    settings: "\u8bbe\u7f6e",
+    defaultLanguage: "\u9ed8\u8ba4\u8bed\u8a00",
+    save: "\u4fdd\u5b58",
+    saved: "\u5df2\u4fdd\u5b58",
     translating: "\u7ffb\u8bd1\u4e2d...",
     translateFailed: "\u7ffb\u8bd1\u5931\u8d25",
     noText: "\u672a\u8bc6\u522b\u5230\u53ef\u7ffb\u8bd1\u6587\u5b57",
@@ -65,6 +70,22 @@
 
         <button class="translate-button" title="${text.translate}" aria-label="${text.translate}"></button>
         <button class="clear-button" type="button">${text.clear}</button>
+        <button class="settings-button" type="button">${text.settings}</button>
+
+        <div class="settings-panel" data-settings-panel hidden>
+          <label for="glass-default-language">${text.defaultLanguage}</label>
+          <select id="glass-default-language" class="default-language">
+            <option value="${text.chinese}" selected>${text.chinese}</option>
+            <option value="English">English</option>
+            <option value="${text.japanese}">${text.japanese}</option>
+            <option value="${text.korean}">${text.korean}</option>
+            <option value="Francais">Francais</option>
+            <option value="Deutsch">Deutsch</option>
+            <option value="Espanol">Espanol</option>
+          </select>
+          <button class="save-settings-button" type="button">${text.save}</button>
+        </div>
+
         <div class="status" aria-live="polite"></div>
       </div>
 
@@ -86,15 +107,21 @@
   const translateButton = root.querySelector(".translate-button");
   const clearButton = root.querySelector(".clear-button");
   const closeButton = root.querySelector(".close-button");
+  const settingsButton = root.querySelector(".settings-button");
+  const saveSettingsButton = root.querySelector(".save-settings-button");
+  const settingsPanel = root.querySelector("[data-settings-panel]");
   const translationLayer = root.querySelector("[data-translation-layer]");
   const status = root.querySelector(".status");
   const targetLanguageInput = root.querySelector(".target-language");
+  const defaultLanguageInput = root.querySelector(".default-language");
   const modelInput = root.querySelector(".model-select");
 
   let dragging = false;
   let resizing = null;
   let offsetX = 0;
   let offsetY = 0;
+
+  loadDefaultLanguage();
 
   glassWindow.addEventListener("mousedown", (event) => {
     const resizeHandle = event.target.closest("[data-resize]");
@@ -143,6 +170,18 @@
     translationLayer.innerHTML = "";
     glassArea.classList.remove("has-translation");
     status.textContent = "";
+  });
+
+  settingsButton.addEventListener("click", () => {
+    settingsPanel.hidden = !settingsPanel.hidden;
+  });
+
+  saveSettingsButton.addEventListener("click", async () => {
+    const defaultLanguage = defaultLanguageInput.value;
+
+    await setStoredValue(DEFAULT_LANGUAGE_STORAGE_KEY, defaultLanguage);
+    targetLanguageInput.value = defaultLanguage;
+    status.textContent = text.saved;
   });
 
   translateButton.addEventListener("click", async () => {
@@ -344,6 +383,39 @@
     translateButton.disabled = isBusy;
     translateButton.classList.toggle("is-loading", isBusy);
     if (message) status.textContent = message;
+  }
+
+  async function loadDefaultLanguage() {
+    const defaultLanguage = await getStoredValue(DEFAULT_LANGUAGE_STORAGE_KEY);
+    if (!defaultLanguage) return;
+
+    targetLanguageInput.value = defaultLanguage;
+    defaultLanguageInput.value = defaultLanguage;
+  }
+
+  function getStoredValue(key) {
+    return new Promise((resolve) => {
+      if (!chrome?.storage?.local) {
+        resolve(window.localStorage.getItem(key));
+        return;
+      }
+
+      chrome.storage.local.get(key, (items) => {
+        resolve(items?.[key] || null);
+      });
+    });
+  }
+
+  function setStoredValue(key, value) {
+    return new Promise((resolve) => {
+      if (!chrome?.storage?.local) {
+        window.localStorage.setItem(key, value);
+        resolve();
+        return;
+      }
+
+      chrome.storage.local.set({ [key]: value }, resolve);
+    });
   }
 
   function normalizeAlign(align) {

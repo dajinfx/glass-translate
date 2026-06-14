@@ -154,6 +154,49 @@
   cursor: pointer;
 }
 
+#glass-translate-root .settings-button {
+  width: 100%;
+  height: 34px;
+  margin-top: 10px;
+  border: 1px solid #111;
+  background: #f3f3f3;
+  color: #111;
+  font-size: 14px;
+  cursor: pointer;
+}
+
+#glass-translate-root .settings-panel {
+  margin-top: 12px;
+  padding: 12px;
+  border: 1px solid #111;
+  background: #fff;
+}
+
+#glass-translate-root .settings-panel[hidden] {
+  display: none;
+}
+
+#glass-translate-root .settings-panel label {
+  margin-bottom: 6px;
+  font-size: 13px;
+}
+
+#glass-translate-root .settings-panel select {
+  height: 32px;
+  font-size: 13px;
+}
+
+#glass-translate-root .save-settings-button {
+  width: 100%;
+  height: 32px;
+  margin-top: 8px;
+  border: 1px solid #111;
+  background: #111;
+  color: #fff;
+  font-size: 13px;
+  cursor: pointer;
+}
+
 #glass-translate-root .status {
   min-height: 18px;
   margin-top: 12px;

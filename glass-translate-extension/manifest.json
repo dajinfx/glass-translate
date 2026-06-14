@@ -3,7 +3,7 @@
   "name": "Glass Translate",
   "version": "0.1.0",
   "description": "Translate text from webpages, images, and PDFs with a glass-like AI vision window.",
-  "permissions": ["activeTab", "tabs", "scripting"],
+  "permissions": ["activeTab", "tabs", "scripting", "storage"],
   "host_permissions": ["<all_urls>", "https://glass-translate-api.onrender.com/*"],
   "background": {
     "service_worker": "background.js"
