@@ -21,7 +21,7 @@
   top: 80px;
   display: flex;
   width: min(980px, calc(100vw - 32px));
-  height: min(560px, calc(100vh - 32px));
+  height: min(280px, calc(100vh - 32px));
   min-width: 360px;
   min-height: 120px;
   border: 1px solid rgba(203, 213, 225, 0.72);
@@ -246,8 +246,8 @@
 
 #glass-translate-root .settings-panel {
   position: absolute;
-  top: calc(100% - 12px);
-  right: 10px;
+  top: calc(100% - 42px);
+  right: -8px;
   z-index: 30;
   width: 148px;
   padding: 10px;
