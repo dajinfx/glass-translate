@@ -16,6 +16,8 @@
   const TRANSLATE_BUTTON_SAFE_WIDTH = 72;
   const TRANSLATE_BUTTON_SAFE_HEIGHT = 54;
   const FLOW_OVERLAP_LIMIT = 0.18;
+  const TEXT_LINE_Y_TOLERANCE = 10;
+  const TEXT_COLUMN_GAP_LIMIT = 260;
   const DEFAULT_LANGUAGE_STORAGE_KEY = "glassTranslateDefaultLanguage";
   const DEFAULT_MODEL_STORAGE_KEY = "glassTranslateDefaultModel";
   const CAPTURE_MODE_STORAGE_KEY = "glassTranslateCaptureMode";
@@ -645,7 +647,7 @@
       node = walker.nextNode();
     }
 
-    return mergeTextBlocksIntoParagraphs(rawBlocks).slice(0, 50);
+    return mergeTextBlocksIntoRows(rawBlocks).slice(0, 60);
   }
 
   function renderTranslationBlocks(blocks, mode = "ocr") {
@@ -711,28 +713,28 @@
     }
   }
 
-  function mergeTextBlocksIntoParagraphs(blocks) {
+  function mergeTextBlocksIntoRows(blocks) {
     const meaningfulBlocks = blocks
       .filter((block) => isMeaningfulText(block.sourceText))
       .sort((a, b) => a.y - b.y || a.x - b.x);
-    const lines = [];
+    const rows = [];
 
     for (const block of meaningfulBlocks) {
-      const last = lines[lines.length - 1];
-      const sameLine = last && Math.abs(block.y - last.y) <= Math.max(8, last.lineHeight * 0.45);
+      const last = rows[rows.length - 1];
+      const sameRow = last && Math.abs(block.y - last.y) <= Math.max(TEXT_LINE_Y_TOLERANCE, last.lineHeight * 0.5);
 
-      if (!sameLine) {
-        lines.push({ ...block });
+      if (!sameRow) {
+        rows.push({ ...block });
         continue;
       }
 
       const gap = block.x - (last.x + last.width);
-      if (gap > 80) {
-        lines.push({ ...block });
+      if (gap > TEXT_COLUMN_GAP_LIMIT) {
+        rows.push({ ...block });
         continue;
       }
 
-      last.sourceText = `${last.sourceText} ${block.sourceText}`.trim();
+      last.sourceText = `${last.sourceText}${buildColumnSeparator(gap)}${block.sourceText}`.trim();
       const right = Math.max(last.x + last.width, block.x + block.width);
       last.width = right - last.x;
       last.height = Math.max(last.height, block.height);
@@ -740,31 +742,16 @@
       last.lineHeight = Math.max(last.lineHeight, block.lineHeight);
     }
 
-    const paragraphs = [];
-
-    for (const line of lines) {
-      const last = paragraphs[paragraphs.length - 1];
-      const lineGap = last ? line.y - (last.y + last.height) : Number.POSITIVE_INFINITY;
-      const aligned = last ? Math.abs(line.x - last.x) <= 36 : false;
-      const closeEnough = lineGap <= Math.max(14, last?.lineHeight || 20);
-
-      if (!last || !aligned || !closeEnough) {
-        paragraphs.push({ ...line });
-        continue;
-      }
-
-      last.sourceText = `${last.sourceText}\n${line.sourceText}`;
-      const right = Math.max(last.x + last.width, line.x + line.width);
-      last.width = right - last.x;
-      last.height = line.y + line.height - last.y;
-      last.fontSize = Math.max(last.fontSize, line.fontSize);
-      last.lineHeight = Math.max(last.lineHeight, line.lineHeight);
-    }
-
-    return paragraphs.map((paragraph, index) => ({
-      ...paragraph,
+    return rows.map((row, index) => ({
+      ...row,
       id: `text_${index + 1}`
     }));
+  }
+
+  function buildColumnSeparator(gap) {
+    if (gap > 160) return "    ";
+    if (gap > 72) return "   ";
+    return " ";
   }
 
   function shouldRenderAsFlow(blocks) {
@@ -1035,9 +1022,9 @@
 
   function getExtensionVersion() {
     if (typeof chrome === "undefined" || !chrome.runtime?.getManifest) {
-      return "0.1.3";
+      return "0.1.4";
     }
 
-    return chrome.runtime.getManifest().version || "0.1.3";
+    return chrome.runtime.getManifest().version || "0.1.4";
   }
 })();
