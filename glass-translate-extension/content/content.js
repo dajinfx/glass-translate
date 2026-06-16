@@ -203,15 +203,11 @@
       </div>
 
       <div class="glass-panel">
-        <div class="field">
-          <label for="glass-target-language" data-i18n="language"></label>
-          <select id="glass-target-language" class="target-language">
-            ${buildLanguageOptions(DEFAULT_LANGUAGE)}
-          </select>
-        </div>
-
-        <button class="translate-button" title="" aria-label=""></button>
+        <button class="translate-button" type="button" title="" aria-label="" data-i18n="translate"></button>
         <button class="clear-button" type="button" data-i18n="clear"></button>
+        <select id="glass-target-language" class="target-language" aria-label="Language">
+          ${buildLanguageOptions(DEFAULT_LANGUAGE)}
+        </select>
         <button class="settings-button" type="button" data-i18n="settings"></button>
 
         <div class="settings-panel" data-settings-panel hidden>
@@ -1022,9 +1018,9 @@
 
   function getExtensionVersion() {
     if (typeof chrome === "undefined" || !chrome.runtime?.getManifest) {
-      return "0.1.5";
+      return "0.1.6";
     }
 
-    return chrome.runtime.getManifest().version || "0.1.5";
+    return chrome.runtime.getManifest().version || "0.1.6";
   }
 })();
