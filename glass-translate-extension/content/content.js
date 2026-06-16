@@ -22,6 +22,7 @@
   const DEFAULT_LANGUAGE = "English";
   const DEFAULT_MODEL = "deepseek";
   const DEFAULT_CAPTURE_MODE = "text";
+  const APP_VERSION = getExtensionVersion();
 
   const LANGUAGE_OPTIONS = [
     { key: "en", value: "English", label: "English" },
@@ -212,6 +213,7 @@
         <button class="settings-button" type="button" data-i18n="settings"></button>
 
         <div class="settings-panel" data-settings-panel hidden>
+          <div class="settings-version">Glass Translate v${APP_VERSION}</div>
           <div class="settings-field">
             <label for="glass-default-language" data-i18n="defaultLanguage"></label>
             <select id="glass-default-language" class="default-language">
@@ -995,5 +997,13 @@
 
   function clamp(value, min, max) {
     return Math.min(Math.max(value, min), max);
+  }
+
+  function getExtensionVersion() {
+    if (typeof chrome === "undefined" || !chrome.runtime?.getManifest) {
+      return "0.1.2";
+    }
+
+    return chrome.runtime.getManifest().version || "0.1.2";
   }
 })();

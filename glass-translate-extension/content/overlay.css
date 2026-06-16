@@ -278,6 +278,17 @@
   display: none;
 }
 
+#glass-translate-root .settings-version {
+  margin: 0 0 9px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid rgba(226, 232, 240, 0.92);
+  color: #64748b;
+  font-size: 10px;
+  line-height: 1.2;
+  font-weight: 700;
+  letter-spacing: 0;
+}
+
 #glass-translate-root .settings-panel label {
   margin-bottom: 5px;
   font-size: 11px;
