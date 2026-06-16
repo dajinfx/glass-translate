@@ -13,7 +13,7 @@ export async function translateWithGptVision(input) {
   });
 
   const response = await openai.responses.create({
-    model: process.env.OPENAI_VISION_MODEL || "gpt-4o",
+    model: process.env.OPENAI_VISION_MODEL || "gpt-5.4-nano",
     input: [
       {
         role: "user",

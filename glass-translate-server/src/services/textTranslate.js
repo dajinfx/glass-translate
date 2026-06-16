@@ -25,7 +25,7 @@ async function translateWithDeepSeek(input) {
   });
 
   const response = await client.chat.completions.create({
-    model: process.env.DEEPSEEK_MODEL || "deepseek-chat",
+    model: process.env.DEEPSEEK_MODEL || "deepseek-v4-flash",
     messages: [
       {
         role: "user",
@@ -48,7 +48,7 @@ async function translateWithGpt(input) {
   });
 
   const response = await client.responses.create({
-    model: process.env.OPENAI_TEXT_MODEL || process.env.OPENAI_VISION_MODEL || "gpt-4o",
+    model: process.env.OPENAI_TEXT_MODEL || process.env.OPENAI_VISION_MODEL || "gpt-5.4-nano",
     input: buildTextPrompt(input),
     temperature: 0.1
   });
