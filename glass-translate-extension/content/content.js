@@ -884,7 +884,7 @@
   function buildCaptureModeOptions(selectedValue) {
     const modes = [
       { value: "text", label: "Text" },
-      { value: "ocr", label: "OCR" }
+      { value: "ocr", label: "Image text" }
     ];
 
     return modes.map((mode) => {
@@ -1022,9 +1022,9 @@
 
   function getExtensionVersion() {
     if (typeof chrome === "undefined" || !chrome.runtime?.getManifest) {
-      return "0.1.4";
+      return "0.1.5";
     }
 
-    return chrome.runtime.getManifest().version || "0.1.4";
+    return chrome.runtime.getManifest().version || "0.1.5";
   }
 })();
