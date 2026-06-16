@@ -15,6 +15,7 @@
   const TRANSLATION_PADDING = 14;
   const TRANSLATE_BUTTON_SAFE_WIDTH = 72;
   const TRANSLATE_BUTTON_SAFE_HEIGHT = 54;
+  const FLOW_OVERLAP_LIMIT = 0.18;
   const DEFAULT_LANGUAGE_STORAGE_KEY = "glassTranslateDefaultLanguage";
   const DEFAULT_MODEL_STORAGE_KEY = "glassTranslateDefaultModel";
   const CAPTURE_MODE_STORAGE_KEY = "glassTranslateCaptureMode";
@@ -321,6 +322,7 @@
 
   clearButton.addEventListener("click", () => {
     translationLayer.innerHTML = "";
+    translationLayer.classList.remove("is-flow");
     glassArea.classList.remove("has-translation");
     status.textContent = "";
   });
@@ -560,8 +562,7 @@
           if (!text) return NodeFilter.FILTER_REJECT;
           const parent = node.parentElement;
           if (!parent || root.contains(parent)) return NodeFilter.FILTER_REJECT;
-          const tagName = parent.tagName?.toLowerCase();
-          if (["script", "style", "noscript", "textarea", "input", "select", "option"].includes(tagName)) {
+          if (shouldSkipElement(parent)) {
             return NodeFilter.FILTER_REJECT;
           }
           const style = window.getComputedStyle(parent);
@@ -590,12 +591,18 @@
       if (rect.width > 0 && rect.height > 0 && intersects(rect, glassRect)) {
         const parent = node.parentElement;
         const style = window.getComputedStyle(parent);
+        const sourceText = normalizeText(node.nodeValue);
+        if (!isMeaningfulText(sourceText)) {
+          node = walker.nextNode();
+          continue;
+        }
+
         const fontSize = parseFloat(style.fontSize) || 16;
         const lineHeight = parseFloat(style.lineHeight) || fontSize * 1.35;
 
         rawBlocks.push({
           id: `text_${index}`,
-          sourceText: normalizeText(node.nodeValue),
+          sourceText,
           x: Math.round(rect.left - glassRect.left),
           y: Math.round(rect.top - glassRect.top),
           width: Math.round(rect.width),
@@ -610,7 +617,7 @@
       node = walker.nextNode();
     }
 
-    return mergeTextBlocksIntoLines(rawBlocks).slice(0, 80);
+    return mergeTextBlocksIntoParagraphs(rawBlocks).slice(0, 50);
   }
 
   function renderTranslationBlocks(blocks, mode = "ocr") {
@@ -625,6 +632,11 @@
     const layerWidth = Math.max(0, glassArea.clientWidth - TRANSLATION_PADDING * 2);
     const layerHeight = Math.max(0, glassArea.clientHeight - TRANSLATION_PADDING * 2);
     const visibleBlocks = normalizeRenderedBlockPositions(blocks, layerWidth, layerHeight);
+
+    if (shouldRenderAsFlow(visibleBlocks)) {
+      renderFlowTranslationBlocks(visibleBlocks);
+      return;
+    }
 
     for (const block of visibleBlocks) {
       const el = document.createElement("div");
@@ -665,13 +677,13 @@
       const el = document.createElement("div");
       el.className = "translation-block translation-block-flow";
       el.textContent = block.translatedText || "";
-      el.style.fontSize = `${clamp(toNumber(block.fontSize, 16), 12, 24)}px`;
+      el.style.fontSize = `${clamp(toNumber(block.fontSize, 16), 13, 22)}px`;
       el.style.lineHeight = "1.55";
       translationLayer.appendChild(el);
     }
   }
 
-  function mergeTextBlocksIntoLines(blocks) {
+  function mergeTextBlocksIntoParagraphs(blocks) {
     const meaningfulBlocks = blocks
       .filter((block) => isMeaningfulText(block.sourceText))
       .sort((a, b) => a.y - b.y || a.x - b.x);
@@ -700,10 +712,77 @@
       last.lineHeight = Math.max(last.lineHeight, block.lineHeight);
     }
 
-    return lines.map((line, index) => ({
-      ...line,
+    const paragraphs = [];
+
+    for (const line of lines) {
+      const last = paragraphs[paragraphs.length - 1];
+      const lineGap = last ? line.y - (last.y + last.height) : Number.POSITIVE_INFINITY;
+      const aligned = last ? Math.abs(line.x - last.x) <= 36 : false;
+      const closeEnough = lineGap <= Math.max(14, last?.lineHeight || 20);
+
+      if (!last || !aligned || !closeEnough) {
+        paragraphs.push({ ...line });
+        continue;
+      }
+
+      last.sourceText = `${last.sourceText}\n${line.sourceText}`;
+      const right = Math.max(last.x + last.width, line.x + line.width);
+      last.width = right - last.x;
+      last.height = line.y + line.height - last.y;
+      last.fontSize = Math.max(last.fontSize, line.fontSize);
+      last.lineHeight = Math.max(last.lineHeight, line.lineHeight);
+    }
+
+    return paragraphs.map((paragraph, index) => ({
+      ...paragraph,
       id: `text_${index + 1}`
     }));
+  }
+
+  function shouldRenderAsFlow(blocks) {
+    if (!Array.isArray(blocks) || blocks.length <= 1) return false;
+
+    let overlapCount = 0;
+    let checkedPairs = 0;
+
+    for (let i = 0; i < blocks.length; i += 1) {
+      const a = blockRect(blocks[i]);
+      for (let j = i + 1; j < blocks.length; j += 1) {
+        const b = blockRect(blocks[j]);
+        const nearVertically = Math.abs(a.top - b.top) < Math.max(a.height, b.height) * 0.72;
+        const overlapsHorizontally = a.left < b.right && b.left < a.right;
+
+        if (nearVertically || overlapsHorizontally) {
+          checkedPairs += 1;
+          if (rectOverlapArea(a, b) > 0) overlapCount += 1;
+        }
+      }
+    }
+
+    if (!checkedPairs) return false;
+    return overlapCount / checkedPairs > FLOW_OVERLAP_LIMIT;
+  }
+
+  function blockRect(block) {
+    const left = toNumber(block.x, 0);
+    const top = toNumber(block.y, 0);
+    const width = Math.max(1, toNumber(block.width, 1));
+    const height = Math.max(1, toNumber(block.height, toNumber(block.lineHeight, 20)));
+
+    return {
+      left,
+      top,
+      right: left + width,
+      bottom: top + height,
+      width,
+      height
+    };
+  }
+
+  function rectOverlapArea(a, b) {
+    const width = Math.max(0, Math.min(a.right, b.right) - Math.max(a.left, b.left));
+    const height = Math.max(0, Math.min(a.bottom, b.bottom) - Math.max(a.top, b.top));
+    return width * height;
   }
 
   function normalizeRenderedBlockPositions(blocks, layerWidth, layerHeight) {
@@ -852,10 +931,29 @@
     return String(text || "").replace(/\s+/g, " ").trim();
   }
 
+  function shouldSkipElement(element) {
+    const tagName = element.tagName?.toLowerCase();
+    if (["script", "style", "noscript", "textarea", "input", "select", "option", "button", "svg", "path"].includes(tagName)) {
+      return true;
+    }
+
+    if (element.closest("button,[role='button'],[aria-hidden='true'],nav,header,footer")) {
+      return true;
+    }
+
+    const ariaLabel = normalizeText(element.getAttribute("aria-label"));
+    if (ariaLabel && !isMeaningfulText(ariaLabel)) return true;
+
+    return false;
+  }
+
   function isMeaningfulText(text) {
     const normalized = normalizeText(text);
     if (!normalized) return false;
     if (/^[\d.,\s]+$/.test(normalized)) return false;
+    if (/^@\S{2,}$/.test(normalized)) return false;
+    if (/^\d+\s*(second|minute|hour|day|week|month|year)s?\s+ago$/i.test(normalized)) return false;
+    if (/^(edited|translated|translate to .+|show more|show less)$/i.test(normalized)) return false;
     if (normalized.length <= 1) return false;
 
     const lower = normalized.toLowerCase();
@@ -868,7 +966,15 @@
       "share",
       "save",
       "more",
+      "read more",
+      "show more",
+      "show less",
+      "translated to chinese",
+      "translate to chinese",
       "\ub2f5\uae00",
+      "\ub2f5",
+      "\uae00",
+      "\uc77c \uc804",
       "\uc88b\uc544\uc694",
       "\uacf5\uc720",
       "\uc800\uc7a5",

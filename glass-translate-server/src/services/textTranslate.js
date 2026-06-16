@@ -117,6 +117,9 @@ You are the translation engine for Glass Translate.
 
 Translate the text blocks into ${targetLanguage}.
 Preserve each block id and all layout values exactly.
+Do not split one input block into multiple output blocks.
+Do not merge unrelated blocks unless they are already in the same input block.
+Do not add usernames, counters, buttons, explanations, or UI labels that are not present in the input.
 Return strict JSON only. Do not return Markdown. Do not explain.
 
 Input blocks:
