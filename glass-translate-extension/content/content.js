@@ -268,6 +268,7 @@
 
   let dragging = false;
   let resizing = null;
+  let activePointerId = null;
   let offsetX = 0;
   let offsetY = 0;
 
@@ -275,7 +276,9 @@
   applyDefaultModel(DEFAULT_MODEL);
   loadDefaults();
 
-  glassWindow.addEventListener("mousedown", (event) => {
+  glassWindow.addEventListener("pointerdown", (event) => {
+    if (event.button !== 0) return;
+
     const resizeHandle = event.target.closest("[data-resize]");
     if (resizeHandle) {
       beginResize(event, resizeHandle.dataset.resize);
@@ -288,15 +291,12 @@
 
     if (event.target.closest("select") || event.target.closest("button")) return;
 
-    dragging = true;
-    const rect = glassWindow.getBoundingClientRect();
-    offsetX = event.clientX - rect.left;
-    offsetY = event.clientY - rect.top;
-    glassWindow.classList.add("is-dragging");
-    event.preventDefault();
+    beginDrag(event);
   });
 
-  window.addEventListener("mousemove", (event) => {
+  window.addEventListener("pointermove", (event) => {
+    if (activePointerId !== null && event.pointerId !== activePointerId) return;
+
     if (resizing) {
       updateResize(event);
       return;
@@ -304,18 +304,33 @@
 
     if (!dragging) return;
 
-    const nextLeft = clamp(event.clientX - offsetX, EDGE_MARGIN, window.innerWidth - 120);
-    const nextTop = clamp(event.clientY - offsetY, EDGE_MARGIN, window.innerHeight - 80);
+    const nextLeft = clamp(event.clientX - offsetX, EDGE_MARGIN, getViewportWidth() - 120);
+    const nextTop = clamp(event.clientY - offsetY, EDGE_MARGIN, getViewportHeight() - 80);
 
     glassWindow.style.left = `${nextLeft}px`;
     glassWindow.style.top = `${nextTop}px`;
-  });
+    event.preventDefault();
+  }, true);
 
-  window.addEventListener("mouseup", () => {
+  window.addEventListener("pointerup", endInteraction, true);
+  window.addEventListener("pointercancel", endInteraction, true);
+
+  function endInteraction(event) {
+    if (activePointerId !== null && event?.pointerId !== activePointerId) return;
+
     dragging = false;
     resizing = null;
+    activePointerId = null;
     glassWindow.classList.remove("is-dragging", "is-resizing");
-  });
+
+    try {
+      if (event?.pointerId !== undefined && glassWindow.hasPointerCapture?.(event.pointerId)) {
+        glassWindow.releasePointerCapture(event.pointerId);
+      }
+    } catch (error) {
+      console.debug("Glass Translate pointer release skipped", error);
+    }
+  }
 
   closeButton.addEventListener("click", () => {
     root.remove();
@@ -394,9 +409,24 @@
     }
   });
 
+  function beginDrag(event) {
+    activePointerId = event.pointerId;
+    dragging = true;
+
+    const rect = glassWindow.getBoundingClientRect();
+    offsetX = event.clientX - rect.left;
+    offsetY = event.clientY - rect.top;
+
+    glassWindow.classList.add("is-dragging");
+    capturePointer(event);
+    event.preventDefault();
+    event.stopPropagation();
+  }
+
   function beginResize(event, direction) {
     const rect = glassWindow.getBoundingClientRect();
 
+    activePointerId = event.pointerId;
     resizing = {
       direction,
       startX: event.clientX,
@@ -408,6 +438,7 @@
     };
 
     glassWindow.classList.add("is-resizing");
+    capturePointer(event);
     event.preventDefault();
     event.stopPropagation();
   }
@@ -416,47 +447,42 @@
     const dx = event.clientX - resizing.startX;
     const dy = event.clientY - resizing.startY;
     const direction = resizing.direction;
+    const viewportWidth = getViewportWidth();
+    const viewportHeight = getViewportHeight();
 
-    let left = resizing.left;
-    let top = resizing.top;
-    let width = resizing.width;
-    let height = resizing.height;
+    let left = direction.includes("w") ? resizing.left + dx : resizing.left;
+    let top = direction.includes("n") ? resizing.top + dy : resizing.top;
+    let right = direction.includes("e")
+      ? resizing.left + resizing.width + dx
+      : resizing.left + resizing.width;
+    let bottom = direction.includes("s")
+      ? resizing.top + resizing.height + dy
+      : resizing.top + resizing.height;
 
-    if (direction.includes("e")) width = resizing.width + dx;
-    if (direction.includes("s")) height = resizing.height + dy;
+    left = clamp(left, EDGE_MARGIN, viewportWidth - MIN_WIDTH - EDGE_MARGIN);
+    top = clamp(top, EDGE_MARGIN, viewportHeight - MIN_HEIGHT - EDGE_MARGIN);
+    right = clamp(right, left + MIN_WIDTH, viewportWidth - EDGE_MARGIN);
+    bottom = clamp(bottom, top + MIN_HEIGHT, viewportHeight - EDGE_MARGIN);
 
-    if (direction.includes("w")) {
-      width = resizing.width - dx;
-      left = resizing.left + dx;
-    }
+    if (direction.includes("w") && right - left < MIN_WIDTH) left = right - MIN_WIDTH;
+    if (direction.includes("n") && bottom - top < MIN_HEIGHT) top = bottom - MIN_HEIGHT;
 
-    if (direction.includes("n")) {
-      height = resizing.height - dy;
-      top = resizing.top + dy;
-    }
-
-    if (width < MIN_WIDTH) {
-      if (direction.includes("w")) left -= MIN_WIDTH - width;
-      width = MIN_WIDTH;
-    }
-
-    if (height < MIN_HEIGHT) {
-      if (direction.includes("n")) top -= MIN_HEIGHT - height;
-      height = MIN_HEIGHT;
-    }
-
-    const maxWidth = window.innerWidth - EDGE_MARGIN - left;
-    const maxHeight = window.innerHeight - EDGE_MARGIN - top;
-
-    width = clamp(width, MIN_WIDTH, Math.max(MIN_WIDTH, maxWidth));
-    height = clamp(height, MIN_HEIGHT, Math.max(MIN_HEIGHT, maxHeight));
-    left = clamp(left, EDGE_MARGIN, window.innerWidth - MIN_WIDTH - EDGE_MARGIN);
-    top = clamp(top, EDGE_MARGIN, window.innerHeight - MIN_HEIGHT - EDGE_MARGIN);
+    const width = Math.max(MIN_WIDTH, right - left);
+    const height = Math.max(MIN_HEIGHT, bottom - top);
 
     glassWindow.style.left = `${left}px`;
     glassWindow.style.top = `${top}px`;
     glassWindow.style.width = `${width}px`;
     glassWindow.style.height = `${height}px`;
+    event.preventDefault();
+  }
+
+  function capturePointer(event) {
+    try {
+      glassWindow.setPointerCapture?.(event.pointerId);
+    } catch (error) {
+      console.debug("Glass Translate pointer capture skipped", error);
+    }
   }
 
   function captureVisibleTab() {
@@ -999,11 +1025,19 @@
     return Math.min(Math.max(value, min), max);
   }
 
+  function getViewportWidth() {
+    return Math.round(window.visualViewport?.width || window.innerWidth || document.documentElement.clientWidth || 1024);
+  }
+
+  function getViewportHeight() {
+    return Math.round(window.visualViewport?.height || window.innerHeight || document.documentElement.clientHeight || 768);
+  }
+
   function getExtensionVersion() {
     if (typeof chrome === "undefined" || !chrome.runtime?.getManifest) {
-      return "0.1.2";
+      return "0.1.3";
     }
 
-    return chrome.runtime.getManifest().version || "0.1.2";
+    return chrome.runtime.getManifest().version || "0.1.3";
   }
 })();

@@ -30,6 +30,9 @@
   color: #0f172a;
   cursor: move;
   overflow: visible;
+  touch-action: none;
+  contain: layout style;
+  will-change: left, top, width, height;
   box-shadow:
     0 24px 70px rgba(15, 23, 42, 0.18),
     0 3px 12px rgba(15, 23, 42, 0.08);
@@ -38,6 +41,7 @@
 #glass-translate-root .glass-window.is-dragging,
 #glass-translate-root .glass-window.is-resizing {
   user-select: none;
+  -webkit-user-select: none;
 }
 
 #glass-translate-root .close-button {
@@ -322,6 +326,9 @@
   position: absolute;
   z-index: 15;
   background: transparent;
+  touch-action: none;
+  user-select: none;
+  -webkit-user-select: none;
 }
 
 #glass-translate-root .resize-n,
