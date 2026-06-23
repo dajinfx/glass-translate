@@ -12,9 +12,11 @@
   const MIN_WIDTH = 360;
   const MIN_HEIGHT = 120;
   const EDGE_MARGIN = 8;
+  const RIGHT_EDGE_MARGIN = 0;
+  const TOOLBAR_CLEARANCE = 80;
   const TRANSLATION_PADDING = 14;
-  const TRANSLATE_BUTTON_SAFE_WIDTH = 72;
-  const TRANSLATE_BUTTON_SAFE_HEIGHT = 54;
+  const TRANSLATE_BUTTON_SAFE_WIDTH = 0;
+  const TRANSLATE_BUTTON_SAFE_HEIGHT = 0;
   const FLOW_OVERLAP_LIMIT = 0.18;
   const TEXT_LINE_Y_TOLERANCE = 10;
   const TEXT_COLUMN_GAP_LIMIT = 260;
@@ -192,16 +194,6 @@
   root.id = "glass-translate-root";
   root.innerHTML = `
     <div class="glass-window" role="dialog" aria-label="Glass Translate">
-      <button class="close-button" type="button" title="" aria-label="">
-        <svg viewBox="0 0 24 24" aria-hidden="true">
-          <path d="M18 6 6 18M6 6l12 12"></path>
-        </svg>
-      </button>
-
-      <div class="glass-area" data-glass-area>
-        <div class="translation-layer" data-translation-layer></div>
-      </div>
-
       <div class="glass-panel">
         <button class="translate-button" type="button" title="" aria-label="" data-i18n="translate"></button>
         <button class="clear-button" type="button" data-i18n="clear"></button>
@@ -209,6 +201,12 @@
           ${buildLanguageOptions(DEFAULT_LANGUAGE)}
         </select>
         <button class="settings-button" type="button" data-i18n="settings"></button>
+        <button class="close-button" type="button" title="" aria-label="">
+          <svg viewBox="0 0 24 24" aria-hidden="true">
+            <path d="M18 6 6 18M6 6l12 12"></path>
+          </svg>
+        </button>
+        <div class="toolbar-drag-space" aria-hidden="true"></div>
 
         <div class="settings-panel" data-settings-panel hidden>
           <div class="settings-version">Glass Translate v${APP_VERSION}</div>
@@ -234,6 +232,10 @@
         </div>
 
         <div class="status" aria-live="polite"></div>
+      </div>
+
+      <div class="glass-area" data-glass-area>
+        <div class="translation-layer" data-translation-layer></div>
       </div>
 
       <div class="resize-handle resize-n" data-resize="n"></div>
@@ -287,6 +289,7 @@
       return;
     }
 
+    if (event.target.closest(".settings-panel")) return;
     if (event.target.closest("select") || event.target.closest("button")) return;
 
     beginDrag(event);
@@ -302,8 +305,11 @@
 
     if (!dragging) return;
 
-    const nextLeft = clamp(event.clientX - offsetX, EDGE_MARGIN, getViewportWidth() - 120);
-    const nextTop = clamp(event.clientY - offsetY, EDGE_MARGIN, getViewportHeight() - 80);
+    const rect = glassWindow.getBoundingClientRect();
+    const maxLeft = Math.max(EDGE_MARGIN, getViewportWidth() - rect.width - RIGHT_EDGE_MARGIN);
+    const maxTop = Math.max(TOOLBAR_CLEARANCE, getViewportHeight() - 80);
+    const nextLeft = clamp(event.clientX - offsetX, EDGE_MARGIN, maxLeft);
+    const nextTop = clamp(event.clientY - offsetY, TOOLBAR_CLEARANCE, maxTop);
 
     glassWindow.style.left = `${nextLeft}px`;
     glassWindow.style.top = `${nextTop}px`;
@@ -457,9 +463,9 @@
       ? resizing.top + resizing.height + dy
       : resizing.top + resizing.height;
 
-    left = clamp(left, EDGE_MARGIN, viewportWidth - MIN_WIDTH - EDGE_MARGIN);
-    top = clamp(top, EDGE_MARGIN, viewportHeight - MIN_HEIGHT - EDGE_MARGIN);
-    right = clamp(right, left + MIN_WIDTH, viewportWidth - EDGE_MARGIN);
+    left = clamp(left, EDGE_MARGIN, viewportWidth - MIN_WIDTH - RIGHT_EDGE_MARGIN);
+    top = clamp(top, TOOLBAR_CLEARANCE, viewportHeight - MIN_HEIGHT - EDGE_MARGIN);
+    right = clamp(right, left + MIN_WIDTH, viewportWidth - RIGHT_EDGE_MARGIN);
     bottom = clamp(bottom, top + MIN_HEIGHT, viewportHeight - EDGE_MARGIN);
 
     if (direction.includes("w") && right - left < MIN_WIDTH) left = right - MIN_WIDTH;

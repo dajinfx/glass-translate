@@ -19,12 +19,12 @@
   position: fixed;
   left: 80px;
   top: 80px;
-  display: flex;
+  display: block;
   width: min(980px, calc(100vw - 32px));
   height: min(280px, calc(100vh - 32px));
   min-width: 360px;
   min-height: 120px;
-  border: 1px solid rgba(203, 213, 225, 0.72);
+  border: 2px solid rgba(100, 116, 139, 0.52);
   border-radius: 14px;
   background: rgba(255, 255, 255, 0.08);
   color: #0f172a;
@@ -45,17 +45,14 @@
 }
 
 #glass-translate-root .close-button {
-  position: absolute;
-  right: 8px;
-  top: 8px;
-  z-index: 20;
+  flex: 0 0 28px;
   display: grid;
   place-items: center;
-  width: 24px;
-  height: 24px;
+  width: 28px;
+  height: 28px;
   border: 0;
   border-radius: 999px;
-  background: rgba(255, 255, 255, 0.72);
+  background: rgba(255, 255, 255, 0.86);
   color: #64748b;
   cursor: pointer;
   transition: background-color 120ms ease, color 120ms ease, transform 120ms ease;
@@ -79,11 +76,35 @@
   stroke-linecap: round;
 }
 
+#glass-translate-root .toolbar-drag-space {
+  flex: 0 0 38px;
+  align-self: stretch;
+  min-height: 28px;
+  border-radius: 8px;
+  cursor: move;
+  position: relative;
+}
+
+#glass-translate-root .toolbar-drag-space::before {
+  content: "";
+  position: absolute;
+  top: 7px;
+  bottom: 7px;
+  left: 14px;
+  width: 10px;
+  border-left: 2px solid rgba(100, 116, 139, 0.38);
+  border-right: 2px solid rgba(100, 116, 139, 0.38);
+}
+
+#glass-translate-root .toolbar-drag-space:hover {
+  background: rgba(226, 232, 240, 0.7);
+}
+
 #glass-translate-root .glass-area {
   position: relative;
-  flex: 1 1 auto;
-  min-width: 190px;
-  border-radius: 13px 0 0 13px;
+  width: 100%;
+  height: 100%;
+  border-radius: 12px;
   background: rgba(255, 255, 255, 0.04);
   overflow: hidden;
   transition: background-color 120ms ease;
@@ -104,7 +125,7 @@
 }
 
 #glass-translate-root .translation-layer.is-flow {
-  padding: 18px 88px 18px 22px;
+  padding: 18px 22px;
 }
 
 #glass-translate-root .translation-block {
@@ -133,17 +154,25 @@
 }
 
 #glass-translate-root .glass-panel {
-  position: relative;
-  z-index: 10;
-  flex: 0 0 148px;
-  width: 148px;
-  padding: 44px 10px 10px;
-  border-left: 1px solid rgba(226, 232, 240, 0.88);
-  border-radius: 0 13px 13px 0;
+  position: absolute;
+  right: 0;
+  bottom: calc(100% + 8px);
+  z-index: 30;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  width: max-content;
+  max-width: min(560px, calc(100vw - 16px));
+  padding: 8px;
+  border: 1px solid rgba(203, 213, 225, 0.96);
+  border-radius: 12px;
   background: rgba(248, 250, 252, 0.96);
-  cursor: default;
+  cursor: move;
   overflow: visible;
-  box-shadow: inset 1px 0 0 rgba(255, 255, 255, 0.72);
+  box-shadow:
+    0 18px 40px rgba(15, 23, 42, 0.16),
+    0 3px 10px rgba(15, 23, 42, 0.08);
 }
 
 #glass-translate-root .field {
@@ -161,7 +190,7 @@
 
 #glass-translate-root select {
   display: block;
-  width: 100%;
+  width: 132px;
   height: 28px;
   appearance: none;
   -webkit-appearance: none;
@@ -190,9 +219,10 @@
 
 #glass-translate-root .translate-button {
   display: block;
-  width: 100%;
+  flex: 0 0 132px;
+  width: 132px;
   height: 28px;
-  margin: 0 0 8px;
+  margin: 0;
   border: 1px solid #ef233c;
   border-radius: 8px;
   background: #ef233c;
@@ -226,7 +256,7 @@
 #glass-translate-root .clear-button,
 #glass-translate-root .settings-button,
 #glass-translate-root .save-settings-button {
-  width: 100%;
+  width: 78px;
   height: 28px;
   border-radius: 8px;
   font-size: 12px;
@@ -236,7 +266,7 @@
 }
 
 #glass-translate-root .clear-button {
-  margin-bottom: 8px;
+  margin: 0;
   border: 1px solid rgba(203, 213, 225, 0.95);
   background: rgba(255, 255, 255, 0.74);
   color: #475569;
@@ -249,7 +279,7 @@
 }
 
 #glass-translate-root .settings-button {
-  margin-top: 8px;
+  margin: 0;
   border: 1px solid #111827;
   background: #111827;
   color: #fff;
@@ -269,9 +299,9 @@
 
 #glass-translate-root .settings-panel {
   position: absolute;
-  top: calc(100% - 42px);
-  right: -8px;
-  z-index: 30;
+  top: calc(100% + 8px);
+  right: 36px;
+  z-index: 40;
   width: 148px;
   padding: 10px;
   border: 1px solid rgba(226, 232, 240, 0.95);
@@ -307,95 +337,117 @@
 }
 
 #glass-translate-root .settings-panel select {
+  width: 100%;
   height: 28px;
   font-size: 12px;
 }
 
 #glass-translate-root .save-settings-button {
   margin-top: 8px;
+  width: 100%;
   border: 1px solid #111827;
   background: #111827;
   color: #fff;
 }
 
 #glass-translate-root .status {
+  flex: 1 1 100%;
   min-height: 14px;
-  margin-top: 7px;
+  margin: -2px 2px 0;
   color: #64748b;
   font-size: 11px;
   line-height: 14px;
 }
 
+#glass-translate-root .status:empty {
+  display: none;
+}
+
 #glass-translate-root .resize-handle {
   position: absolute;
-  z-index: 15;
+  z-index: 20;
   background: transparent;
   touch-action: none;
   user-select: none;
   -webkit-user-select: none;
 }
 
+#glass-translate-root .resize-handle::after {
+  content: "";
+  position: absolute;
+  inset: 4px;
+  border-radius: 999px;
+  background: rgba(14, 165, 233, 0.28);
+  opacity: 0;
+  transition: opacity 120ms ease;
+}
+
+#glass-translate-root .resize-handle:hover::after,
+#glass-translate-root .glass-window.is-resizing .resize-handle::after {
+  opacity: 1;
+}
+
 #glass-translate-root .resize-n,
 #glass-translate-root .resize-s {
-  left: 14px;
-  right: 14px;
-  height: 10px;
+  left: 18px;
+  right: 18px;
+  height: 16px;
   cursor: ns-resize;
 }
 
 #glass-translate-root .resize-n {
-  top: -5px;
+  top: -8px;
 }
 
 #glass-translate-root .resize-s {
-  bottom: -5px;
+  bottom: -8px;
 }
 
 #glass-translate-root .resize-e,
 #glass-translate-root .resize-w {
-  top: 14px;
-  bottom: 14px;
-  width: 10px;
+  top: 18px;
+  bottom: 18px;
+  width: 16px;
   cursor: ew-resize;
 }
 
 #glass-translate-root .resize-e {
-  right: -5px;
+  right: -8px;
 }
 
 #glass-translate-root .resize-w {
-  left: -5px;
+  left: -8px;
 }
 
 #glass-translate-root .resize-ne,
 #glass-translate-root .resize-nw,
 #glass-translate-root .resize-se,
 #glass-translate-root .resize-sw {
-  width: 18px;
-  height: 18px;
+  width: 26px;
+  height: 26px;
 }
 
 #glass-translate-root .resize-ne {
-  right: -7px;
-  top: -7px;
+  right: -11px;
+  top: -11px;
   cursor: nesw-resize;
 }
 
 #glass-translate-root .resize-nw {
-  left: -7px;
-  top: -7px;
+  left: -11px;
+  top: -11px;
   cursor: nwse-resize;
 }
 
 #glass-translate-root .resize-se {
-  right: -7px;
-  bottom: -7px;
+  right: -11px;
+  bottom: -11px;
   cursor: nwse-resize;
 }
 
 #glass-translate-root .resize-sw {
-  left: -7px;
-  bottom: -7px;
+  left: -11px;
+  bottom: -11px;
   cursor: nesw-resize;
 }
 
