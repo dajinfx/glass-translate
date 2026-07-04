@@ -9,6 +9,7 @@
 
   const API_URL = "https://glass-translate-api.onrender.com/api/translate-image";
   const TEXT_API_URL = "https://glass-translate-api.onrender.com/api/translate-text";
+  const API_HEALTH_URL = "https://glass-translate-api.onrender.com/health";
   const MIN_WIDTH = 360;
   const MIN_HEIGHT = 120;
   const EDGE_MARGIN = 8;
@@ -20,6 +21,8 @@
   const FLOW_OVERLAP_LIMIT = 0.18;
   const TEXT_LINE_Y_TOLERANCE = 10;
   const TEXT_COLUMN_GAP_LIMIT = 260;
+  const TEXT_TRANSLATION_CHUNK_CHAR_LIMIT = 1800;
+  const TEXT_TRANSLATION_TOTAL_CHAR_LIMIT = 5200;
   const DEFAULT_LANGUAGE_STORAGE_KEY = "glassTranslateDefaultLanguage";
   const DEFAULT_MODEL_STORAGE_KEY = "glassTranslateDefaultModel";
   const CAPTURE_MODE_STORAGE_KEY = "glassTranslateCaptureMode";
@@ -275,6 +278,7 @@
   applyToolLanguage(DEFAULT_LANGUAGE);
   applyDefaultModel(DEFAULT_MODEL);
   loadDefaults();
+  warmApi();
 
   glassWindow.addEventListener("pointerdown", (event) => {
     if (event.button !== 0) return;
@@ -583,6 +587,13 @@
     return data;
   }
 
+  function warmApi() {
+    fetch(API_HEALTH_URL, {
+      method: "GET",
+      cache: "no-store"
+    }).catch(() => {});
+  }
+
   function collectTextBlocksFromGlassArea() {
     const glassRect = glassArea.getBoundingClientRect();
     const walker = document.createTreeWalker(
@@ -649,7 +660,41 @@
       node = walker.nextNode();
     }
 
-    return mergeTextBlocksIntoRows(rawBlocks).slice(0, 60);
+    return compactTextRowsForFastTranslation(mergeTextBlocksIntoRows(rawBlocks));
+  }
+
+  function compactTextRowsForFastTranslation(rows) {
+    const chunks = [];
+    let current = null;
+    let totalChars = 0;
+
+    for (const row of rows) {
+      const text = normalizeText(row.sourceText);
+      if (!text) continue;
+
+      const separator = current ? "\n" : "";
+      const nextLength = separator.length + text.length;
+      if (totalChars + nextLength > TEXT_TRANSLATION_TOTAL_CHAR_LIMIT) break;
+
+      if (!current || current.sourceText.length + nextLength > TEXT_TRANSLATION_CHUNK_CHAR_LIMIT) {
+        current = { ...row, sourceText: text };
+        chunks.push(current);
+      } else {
+        current.sourceText = `${current.sourceText}\n${text}`;
+        const right = Math.max(current.x + current.width, row.x + row.width);
+        current.width = right - current.x;
+        current.height = Math.max(current.height, row.y + row.height - current.y);
+        current.fontSize = Math.max(current.fontSize, row.fontSize);
+        current.lineHeight = Math.max(current.lineHeight, row.lineHeight);
+      }
+
+      totalChars += nextLength;
+    }
+
+    return chunks.map((chunk, index) => ({
+      ...chunk,
+      id: `text_${index + 1}`
+    }));
   }
 
   function renderTranslationBlocks(blocks, mode = "ocr") {

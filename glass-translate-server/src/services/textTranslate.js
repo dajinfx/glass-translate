@@ -92,33 +92,39 @@ async function translateWithGemini(input) {
 }
 
 function normalizeResult(parsed, input) {
+  const returnedBlocks = Array.isArray(parsed.blocks) ? parsed.blocks : [];
+  const returnedTranslations = Array.isArray(parsed.translations) ? parsed.translations : returnedBlocks;
+  const translatedById = new Map(
+    returnedTranslations
+      .map((block) => [String(block?.id || ""), String(block?.translatedText || "").trim()])
+      .filter(([id, translatedText]) => id && translatedText)
+  );
+
   return {
     sourceLanguage: parsed.sourceLanguage || "unknown",
     targetLanguage: input.targetLanguage,
-    blocks: normalizeBlocks(parsed.blocks, input.viewport)
+    blocks: normalizeBlocks(
+      input.blocks.map((block) => ({
+        ...block,
+        translatedText: translatedById.get(block.id) || ""
+      })),
+      input.viewport
+    )
   };
 }
 
 function buildTextPrompt({ targetLanguage, blocks }) {
   const compactBlocks = blocks.map((block) => ({
     id: block.id,
-    sourceText: block.sourceText,
-    x: block.x,
-    y: block.y,
-    width: block.width,
-    height: block.height,
-    fontSize: block.fontSize,
-    lineHeight: block.lineHeight,
-    align: block.align
+    text: block.sourceText
   }));
 
   return `
 You are the translation engine for Glass Translate.
 
 Translate the text blocks into ${targetLanguage}.
-Preserve each block id and all layout values exactly.
-Do not split one input block into multiple output blocks.
-Do not merge unrelated blocks unless they are already in the same input block.
+Preserve each block id exactly.
+Preserve meaningful line breaks inside each translatedText.
 Do not add usernames, counters, buttons, explanations, or UI labels that are not present in the input.
 Return strict JSON only. Do not return Markdown. Do not explain.
 
@@ -129,18 +135,10 @@ Return this exact JSON shape:
 {
   "sourceLanguage": "detected source language",
   "targetLanguage": "${targetLanguage}",
-  "blocks": [
+  "translations": [
     {
       "id": "block_1",
-      "sourceText": "original text",
-      "translatedText": "translated text",
-      "x": 0,
-      "y": 0,
-      "width": 100,
-      "height": 30,
-      "fontSize": 16,
-      "lineHeight": 20,
-      "align": "left"
+      "translatedText": "translated text"
     }
   ]
 }
