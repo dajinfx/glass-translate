@@ -54,6 +54,13 @@
       save: "\u4fdd\u5b58",
       saved: "\u5df2\u4fdd\u5b58",
       translating: "\u7ffb\u8bd1\u4e2d...",
+      preparing: "\u51c6\u5907\u7ffb\u8bd1...",
+      readingText: "\u6b63\u5728\u8bfb\u53d6\u6846\u5185\u6587\u672c...",
+      textReady: "\u5df2\u8bfb\u53d6 {count} \u6bb5\u6587\u672c\uff0c\u6b63\u5728\u53d1\u9001\u540e\u53f0...",
+      capturingImage: "\u6b63\u5728\u622a\u53d6\u6846\u5185\u753b\u9762...",
+      imageReady: "\u5df2\u622a\u53d6\u753b\u9762\uff0c\u6b63\u5728\u53d1\u9001\u540e\u53f0...",
+      waitingTranslation: "\u5df2\u53d1\u9001\u540e\u53f0\uff0c\u7b49\u5f85\u7ffb\u8bd1\u8fd4\u56de...",
+      renderingTranslation: "\u5df2\u6536\u5230\u7ffb\u8bd1\uff0c\u6b63\u5728\u663e\u793a...",
       translateFailed: "\u7ffb\u8bd1\u5931\u8d25",
       noText: "\u672a\u8bc6\u522b\u5230\u53ef\u7ffb\u8bd1\u6587\u5b57",
       noPageText: "\u672a\u627e\u5230\u7f51\u9875\u6587\u672c\uff0c\u8bf7\u5728\u8bbe\u7f6e\u4e2d\u5207\u6362\u5230 OCR",
@@ -75,6 +82,13 @@
       save: "Save",
       saved: "Saved",
       translating: "Translating...",
+      preparing: "Preparing translation...",
+      readingText: "Reading text inside the window...",
+      textReady: "Read {count} text blocks. Sending to server...",
+      capturingImage: "Capturing the window...",
+      imageReady: "Captured image. Sending to server...",
+      waitingTranslation: "Sent to server. Waiting for translation...",
+      renderingTranslation: "Translation received. Rendering...",
       translateFailed: "Translation failed",
       noText: "No translatable text found",
       noPageText: "No page text found. Switch to OCR in Settings.",
@@ -378,7 +392,7 @@
 
   translateButton.addEventListener("click", async () => {
     try {
-      setBusy(true, activeText().translating);
+      setBusy(true, statusText("preparing"));
       translationLayer.innerHTML = "";
       glassArea.classList.remove("has-translation");
 
@@ -388,24 +402,38 @@
         width: Math.round(rect.width),
         height: Math.round(rect.height)
       };
-      const result = captureMode === "ocr"
-        ? await requestOcrTranslation({
-            image: await cropGlassArea(await captureVisibleTab()),
-            targetLanguage: targetLanguageInput.value,
-            model: modelInput.value,
-            viewport
-          })
-        : await requestTextTranslation({
-            blocks: collectTextBlocksFromGlassArea(),
-            targetLanguage: targetLanguageInput.value,
-            model: modelInput.value,
-            viewport
-          });
+      let result;
+
+      if (captureMode === "ocr") {
+        status.textContent = statusText("capturingImage");
+        const image = await cropGlassArea(await captureVisibleTab());
+        status.textContent = statusText("imageReady");
+        result = await requestOcrTranslation({
+          image,
+          targetLanguage: targetLanguageInput.value,
+          model: modelInput.value,
+          viewport
+        });
+      } else {
+        status.textContent = statusText("readingText");
+        const blocks = collectTextBlocksFromGlassArea();
+        if (!blocks.length) {
+          throw new Error(activeText().noPageText);
+        }
+        status.textContent = statusText("textReady", { count: blocks.length });
+        result = await requestTextTranslation({
+          blocks,
+          targetLanguage: targetLanguageInput.value,
+          model: modelInput.value,
+          viewport
+        });
+      }
 
       if (!result.success) {
         throw new Error(result.message || activeText().translateFailed);
       }
 
+      status.textContent = statusText("renderingTranslation");
       renderTranslationBlocks(result.blocks || [], captureMode);
       glassArea.classList.toggle("has-translation", Boolean(result.blocks?.length));
       status.textContent = result.blocks?.length ? "" : activeText().noText;
@@ -550,13 +578,15 @@
   }
 
   async function requestOcrTranslation(payload) {
-    const response = await fetch(API_URL, {
+    const responsePromise = fetch(API_URL, {
       method: "POST",
       headers: {
         "Content-Type": "application/json"
       },
       body: JSON.stringify(payload)
     });
+    status.textContent = statusText("waitingTranslation");
+    const response = await responsePromise;
 
     const data = await response.json().catch(() => null);
     if (!response.ok) {
@@ -571,13 +601,15 @@
       throw new Error(activeText().noPageText);
     }
 
-    const response = await fetch(TEXT_API_URL, {
+    const responsePromise = fetch(TEXT_API_URL, {
       method: "POST",
       headers: {
         "Content-Type": "application/json"
       },
       body: JSON.stringify(payload)
     });
+    status.textContent = statusText("waitingTranslation");
+    const response = await responsePromise;
 
     const data = await response.json().catch(() => null);
     if (!response.ok) {
@@ -915,6 +947,14 @@
 
   function activeText() {
     return I18N[languageKey(currentLanguage)] || I18N.zh;
+  }
+
+  function statusText(key, values = {}) {
+    const template = activeText()[key] || I18N.en[key] || activeText().translating;
+    return Object.entries(values).reduce(
+      (message, [name, value]) => message.replace(`{${name}}`, String(value)),
+      template
+    );
   }
 
   function buildLanguageOptions(selectedValue) {
