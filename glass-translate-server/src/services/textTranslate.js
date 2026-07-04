@@ -2,6 +2,9 @@ import OpenAI from "openai";
 import { parseModelJson } from "../utils/json.js";
 import { normalizeBlocks } from "../utils/normalizeBlocks.js";
 
+const BLOCK_START_RE = /\[\[GT_BLOCK:([^\]]+)\]\]\s*/g;
+const BLOCK_END_RE = /\s*\[\[\/GT_BLOCK\]\]\s*$/;
+
 export async function translateTextBlocks(input) {
   switch (input.model) {
     case "gpt":
@@ -35,7 +38,7 @@ async function translateWithDeepSeek(input) {
     temperature: 0.1
   });
 
-  return normalizeResult(parseModelJson(response.choices?.[0]?.message?.content || ""), input);
+  return normalizeResult(parseTranslatedText(response.choices?.[0]?.message?.content || "", input), input);
 }
 
 async function translateWithGpt(input) {
@@ -53,7 +56,7 @@ async function translateWithGpt(input) {
     temperature: 0.1
   });
 
-  return normalizeResult(parseModelJson(response.output_text || ""), input);
+  return normalizeResult(parseTranslatedText(response.output_text || "", input), input);
 }
 
 async function translateWithGemini(input) {
@@ -88,20 +91,18 @@ async function translateWithGemini(input) {
   }
 
   const text = data?.candidates?.[0]?.content?.parts?.map((part) => part.text || "").join("") || "";
-  return normalizeResult(parseModelJson(text), input);
+  return normalizeResult(parseTranslatedText(text, input), input);
 }
 
-function normalizeResult(parsed, input) {
-  const returnedBlocks = Array.isArray(parsed.blocks) ? parsed.blocks : [];
-  const returnedTranslations = Array.isArray(parsed.translations) ? parsed.translations : returnedBlocks;
+function normalizeResult(parsedTranslations, input) {
   const translatedById = new Map(
-    returnedTranslations
+    parsedTranslations
       .map((block) => [String(block?.id || ""), String(block?.translatedText || "").trim()])
       .filter(([id, translatedText]) => id && translatedText)
   );
 
   return {
-    sourceLanguage: parsed.sourceLanguage || "unknown",
+    sourceLanguage: "unknown",
     targetLanguage: input.targetLanguage,
     blocks: normalizeBlocks(
       input.blocks.map((block) => ({
@@ -114,35 +115,75 @@ function normalizeResult(parsed, input) {
 }
 
 function buildTextPrompt({ targetLanguage, blocks }) {
-  const compactBlocks = blocks.map((block) => ({
-    id: block.id,
-    text: block.sourceText
-  }));
-
   return `
 You are the translation engine for Glass Translate.
 
-Translate the text blocks into ${targetLanguage}.
-Preserve each block id exactly.
+Translate only the text inside each block into ${targetLanguage}.
+Keep each block marker exactly as written.
 Preserve meaningful line breaks inside each translatedText.
 Do not add usernames, counters, buttons, explanations, or UI labels that are not present in the input.
-Return strict JSON only. Do not return Markdown. Do not explain.
+Return only the translated blocks. Do not return JSON. Do not return Markdown. Do not explain.
 
 Input blocks:
-${JSON.stringify(compactBlocks)}
+${formatTextBlocks(blocks)}
 
-Return this exact JSON shape:
-{
-  "sourceLanguage": "detected source language",
-  "targetLanguage": "${targetLanguage}",
-  "translations": [
-    {
-      "id": "block_1",
-      "translatedText": "translated text"
-    }
-  ]
-}
+Return this exact shape:
+[[GT_BLOCK:text_1]]
+translated text
+[[/GT_BLOCK]]
 `.trim();
+}
+
+function formatTextBlocks(blocks) {
+  return blocks
+    .map((block) => `[[GT_BLOCK:${block.id}]]\n${block.sourceText}\n[[/GT_BLOCK]]`)
+    .join("\n\n");
+}
+
+function parseTranslatedText(text, input) {
+  const parsed = parseMarkerBlocks(text);
+  if (parsed.length) return parsed;
+
+  if (input.blocks.length === 1 && String(text || "").trim()) {
+    return [{ id: input.blocks[0].id, translatedText: stripCodeFences(text).trim() }];
+  }
+
+  try {
+    const json = parseModelJson(text);
+    const returnedBlocks = Array.isArray(json.blocks) ? json.blocks : [];
+    return Array.isArray(json.translations) ? json.translations : returnedBlocks;
+  } catch {
+    throwHttp(502, "TEXT_PARSE_FAILED", "Model returned unparseable text translation");
+  }
+}
+
+function parseMarkerBlocks(text) {
+  const cleaned = stripCodeFences(text);
+  const results = [];
+  const matches = [...cleaned.matchAll(BLOCK_START_RE)];
+
+  for (let i = 0; i < matches.length; i += 1) {
+    const match = matches[i];
+    const next = matches[i + 1];
+    const id = String(match[1] || "").trim();
+    const start = match.index + match[0].length;
+    const end = next ? next.index : cleaned.length;
+    const translatedText = cleaned.slice(start, end).replace(BLOCK_END_RE, "").trim();
+
+    if (id && translatedText) {
+      results.push({ id, translatedText });
+    }
+  }
+
+  return results;
+}
+
+function stripCodeFences(text) {
+  return String(text || "")
+    .trim()
+    .replace(/^```(?:text|json)?\s*/i, "")
+    .replace(/\s*```$/i, "")
+    .trim();
 }
 
 function throwHttp(status, code, message) {
