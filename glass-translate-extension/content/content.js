@@ -666,13 +666,14 @@
   function compactTextRowsForFastTranslation(rows) {
     const chunks = [];
     let current = null;
+    let previousRow = null;
     let totalChars = 0;
 
     for (const row of rows) {
       const text = normalizeText(row.sourceText);
       if (!text) continue;
 
-      const separator = current ? "\n" : "";
+      const separator = current && previousRow ? buildTextRowSeparator(previousRow, row) : "";
       const nextLength = separator.length + text.length;
       if (totalChars + nextLength > TEXT_TRANSLATION_TOTAL_CHAR_LIMIT) break;
 
@@ -680,7 +681,7 @@
         current = { ...row, sourceText: text };
         chunks.push(current);
       } else {
-        current.sourceText = `${current.sourceText}\n${text}`;
+        current.sourceText = `${current.sourceText}${separator}${text}`;
         const right = Math.max(current.x + current.width, row.x + row.width);
         current.width = right - current.x;
         current.height = Math.max(current.height, row.y + row.height - current.y);
@@ -689,12 +690,22 @@
       }
 
       totalChars += nextLength;
+      previousRow = row;
     }
 
     return chunks.map((chunk, index) => ({
       ...chunk,
       id: `text_${index + 1}`
     }));
+  }
+
+  function buildTextRowSeparator(previousRow, row) {
+    const previousBottom = previousRow.y + previousRow.height;
+    const verticalGap = Math.max(0, row.y - previousBottom);
+    const lineHeight = Math.max(previousRow.lineHeight || 0, row.lineHeight || 0, 18);
+
+    if (verticalGap >= lineHeight * 1.2) return "\n\n";
+    return "\n";
   }
 
   function renderTranslationBlocks(blocks, mode = "ocr") {

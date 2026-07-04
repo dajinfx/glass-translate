@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "Glass Translate",
-  "version": "0.1.8",
+  "version": "0.1.9",
   "description": "Translate text from webpages, images, and PDFs with a glass-like AI vision window.",
   "icons": {
     "16": "assets/icon-16.png",
