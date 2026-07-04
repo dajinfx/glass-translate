@@ -23,6 +23,8 @@
   const TEXT_COLUMN_GAP_LIMIT = 260;
   const TEXT_TRANSLATION_CHUNK_CHAR_LIMIT = 1800;
   const TEXT_TRANSLATION_TOTAL_CHAR_LIMIT = 5200;
+  const TEXT_PARAGRAPH_GAP_RATIO = 0.42;
+  const TEXT_FLOW_MAX_INDENT = 140;
   const DEFAULT_LANGUAGE_STORAGE_KEY = "glassTranslateDefaultLanguage";
   const DEFAULT_MODEL_STORAGE_KEY = "glassTranslateDefaultModel";
   const CAPTURE_MODE_STORAGE_KEY = "glassTranslateCaptureMode";
@@ -752,7 +754,7 @@
     const verticalGap = Math.max(0, row.y - previousBottom);
     const lineHeight = Math.max(previousRow.lineHeight || 0, row.lineHeight || 0, 18);
 
-    if (verticalGap >= lineHeight * 1.2) return "\n\n";
+    if (verticalGap >= Math.max(8, lineHeight * TEXT_PARAGRAPH_GAP_RATIO)) return "\n\n";
     return "\n";
   }
 
@@ -813,8 +815,11 @@
       const el = document.createElement("div");
       el.className = "translation-block translation-block-flow";
       el.textContent = block.translatedText || "";
+      const indent = clamp(toNumber(block.x, 0), 0, Math.min(TEXT_FLOW_MAX_INDENT, glassArea.clientWidth * 0.22));
       el.style.fontSize = `${clamp(toNumber(block.fontSize, 16), 13, 22)}px`;
       el.style.lineHeight = "1.55";
+      el.style.marginLeft = `${indent}px`;
+      el.style.maxWidth = `calc(100% - ${indent}px)`;
       translationLayer.appendChild(el);
     }
   }
