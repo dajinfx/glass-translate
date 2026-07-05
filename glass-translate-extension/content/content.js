@@ -11,10 +11,10 @@
   const TEXT_API_URL = "https://glass-translate-api.onrender.com/api/translate-text";
   const API_HEALTH_URL = "https://glass-translate-api.onrender.com/health";
   const MIN_WIDTH = 360;
-  const MIN_HEIGHT = 120;
+  const MIN_HEIGHT = 40;
   const EDGE_MARGIN = 8;
   const RIGHT_EDGE_MARGIN = 0;
-  const TOOLBAR_CLEARANCE = 80;
+  const TOOLBAR_CLEARANCE = 16;
   const TRANSLATION_PADDING = 14;
   const TRANSLATE_BUTTON_SAFE_WIDTH = 0;
   const TRANSLATE_BUTTON_SAFE_HEIGHT = 0;
@@ -796,7 +796,7 @@
         top: `${TRANSLATION_PADDING + top}px`,
         width: `${width}px`,
         minHeight: `${Math.max(toNumber(block.height, 24), 18)}px`,
-        fontSize: `${clamp(toNumber(block.fontSize, 16), 10, 48)}px`,
+        fontSize: `${clamp(toNumber(block.fontSize, 16), 8, 24)}px`,
         lineHeight: `${clamp(toNumber(block.lineHeight, 22), 12, 64)}px`,
         textAlign: normalizeAlign(block.align)
       });
@@ -816,7 +816,7 @@
       el.className = "translation-block translation-block-flow";
       el.textContent = block.translatedText || "";
       const indent = clamp(toNumber(block.x, 0), 0, Math.min(TEXT_FLOW_MAX_INDENT, glassArea.clientWidth * 0.22));
-      el.style.fontSize = `${clamp(toNumber(block.fontSize, 16), 13, 22)}px`;
+      el.style.fontSize = `${clamp(toNumber(block.fontSize, 16), 8, 15)}px`;
       el.style.lineHeight = "1.55";
       el.style.marginLeft = `${indent}px`;
       el.style.maxWidth = `calc(100% - ${indent}px)`;
