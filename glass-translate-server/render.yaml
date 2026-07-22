@@ -1,0 +1,7 @@
+services:
+  - type: web
+    name: glass-translate-api
+    env: node
+    buildCommand: npm install
+    startCommand: node src/app.js
+    autoDeploy: true
