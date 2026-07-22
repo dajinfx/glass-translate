@@ -120,20 +120,24 @@ function buildTextPrompt({ targetLanguage, blocks }) {
   return `
 You are the translation engine for Glass Translate.
 
-Translate only the text inside each block into ${targetLanguage}.
-Keep each block marker exactly as written.
-Preserve meaningful line breaks inside each translatedText.
-Do not add usernames, counters, buttons, explanations, or UI labels that are not present in the input.
-Return only the translated blocks. Do not return JSON. Do not return Markdown. Do not explain.
+Translate each text block below into ${targetLanguage}.
+
+For each input block, output its translated version between the SAME markers.
+You MUST output the same number of blocks as the input. One block for each input.
+Keep each block's text together. Preserve meaningful line breaks inside the text.
+Do not add usernames, counters, buttons, explanations, or UI labels.
+Return ONLY the translated blocks with markers. No extra text. No JSON. No Markdown.
 
 Input blocks:
 ${formatTextBlocks(blocks)}
 
-Return this exact shape:
+Output format (one block per input, keep markers):
 [[GT_BLOCK:text_1]]
-translated text
+translated text for block 1
 [[/GT_BLOCK]]
-`.trim();
+[[GT_BLOCK:text_2]]
+translated text for block 2
+[[/GT_BLOCK]]`.trim();
 }
 
 function formatTextBlocks(blocks) {
@@ -244,7 +248,7 @@ async function streamWithGpt(input, onBlock) {
 
 async function parseStreamBlocks(stream, onBlock, input) {
   let buffer = "";
-  const knownBlocks = new Map(); // id -> translatedText (partial)
+  const sentBlockIds = new Set();
 
   for await (const chunk of stream) {
     let delta = "";
@@ -261,17 +265,37 @@ async function parseStreamBlocks(stream, onBlock, input) {
 
     buffer += delta;
 
-    // Find completed blocks (contain closing tag)
-    const completedRegex = /\[\[GT_BLOCK:([^\]]+)\]\]([\s\S]*?)\[\[\/GT_BLOCK\]\]/g;
-    let match;
-    while ((match = completedRegex.exec(buffer)) !== null) {
-      const id = String(match[1]).trim();
-      const text = String(match[2]).trim();
-      if (id && text && !knownBlocks.has(id)) {
-        knownBlocks.set(id, true);
-        onBlock({ id, translatedText: text });
-      }
+    // Scan buffer for completed GT_BLOCKs
+    scanCompletedBlocks(buffer, onBlock, sentBlockIds);
+  }
+}
+
+function scanCompletedBlocks(buffer, onBlock, sentBlockIds) {
+  let pos = 0;
+  while (pos < buffer.length) {
+    const startIdx = buffer.indexOf("[[GT_BLOCK:", pos);
+    if (startIdx === -1) break;
+
+    const idStart = startIdx + 12;
+    const idEnd = buffer.indexOf("]]", idStart);
+    if (idEnd === -1) break;
+
+    const id = buffer.slice(idStart, idEnd).trim();
+    if (!id) { pos = idEnd + 2; continue; }
+
+    const contentStart = idEnd + 2;
+    const endTag = "[[/GT_BLOCK]]";
+    const tagIdx = buffer.indexOf(endTag, contentStart);
+    if (tagIdx === -1) break;
+
+    const text = buffer.slice(contentStart, tagIdx).trim();
+
+    if (text && !sentBlockIds.has(id)) {
+      sentBlockIds.add(id);
+      onBlock({ id, translatedText: text });
     }
+
+    pos = tagIdx + endTag.length;
   }
 }
 

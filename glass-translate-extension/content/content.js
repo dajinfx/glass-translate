@@ -438,13 +438,24 @@
         showStatusStep("stepCapturingImage", "capturingImage");
         const image = await cropGlassArea(await captureVisibleTab());
         showStatusStep("stepSending", "imageReady");
-        await requestOcrTranslationStream({
-          image,
-          targetLanguage: targetLanguageInput.value,
-          model: "gpt",
-          viewport
-        });
-        result = null;
+        try {
+          await requestOcrTranslationStream({
+            image,
+            targetLanguage: targetLanguageInput.value,
+            model: "gpt",
+            viewport
+          });
+          result = null;
+        } catch (streamError) {
+          console.warn("OCR stream failed, falling back:", streamError);
+          showStatusStep("stepSending", "imageReady");
+          result = await requestOcrTranslation({
+            image,
+            targetLanguage: targetLanguageInput.value,
+            model: "gpt",
+            viewport
+          });
+        }
       } else {
         showStatusStep("stepReadingText", "readingText");
         const blocks = collectTextBlocksFromGlassArea();
@@ -452,13 +463,25 @@
           throw new Error(activeText().noPageText);
         }
         showStatusStep("stepSending", "textReady", { count: blocks.length });
-        await requestTextTranslationStream({
-          blocks,
-          targetLanguage: targetLanguageInput.value,
-          model: "deepseek",
-          viewport
-        });
-        result = null; // stream handles rendering
+        try {
+          await requestTextTranslationStream({
+            blocks,
+            targetLanguage: targetLanguageInput.value,
+            model: "deepseek",
+            viewport
+          });
+          result = null; // stream handled rendering
+        } catch (streamError) {
+          // Stream failed — fallback to non-streaming
+          console.warn("Stream translation failed, falling back:", streamError);
+          showStatusStep("stepSending", "textReady", { count: blocks.length });
+          result = await requestTextTranslation({
+            blocks,
+            targetLanguage: targetLanguageInput.value,
+            model: "deepseek",
+            viewport
+          });
+        }
       }
 
       // Stream modes (text and ocr) handle rendering themselves.
