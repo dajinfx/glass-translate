@@ -3,6 +3,8 @@ import { parseModelJson } from "../utils/json.js";
 import { normalizeBlocks } from "../utils/normalizeBlocks.js";
 
 const BLOCK_START_RE = /\[\[GT_BLOCK:([^\]]+)\]\]\s*/g;
+const BLOCK_END_TAG = "[[/GT_BLOCK]]";
+
 const BLOCK_END_RE = /\s*\[\[\/GT_BLOCK\]\]\s*$/;
 
 export async function translateTextBlocks(input) {
@@ -184,6 +186,130 @@ function stripCodeFences(text) {
     .replace(/^```(?:text|json)?\s*/i, "")
     .replace(/\s*```$/i, "")
     .trim();
+}
+
+export async function streamTranslateTextBlocks(input, onBlock) {
+  switch (input.model) {
+    case "gpt":
+      return streamWithGpt(input, onBlock);
+    case "deepseek":
+    default:
+      return streamWithDeepSeek(input, onBlock);
+  }
+}
+
+async function streamWithDeepSeek(input, onBlock) {
+  if (!process.env.DEEPSEEK_API_KEY) {
+    throwHttp(500, "MODEL_NOT_CONFIGURED", "DEEPSEEK_API_KEY is not configured");
+  }
+
+  const client = new OpenAI({
+    apiKey: process.env.DEEPSEEK_API_KEY,
+    baseURL: process.env.DEEPSEEK_BASE_URL || "https://api.deepseek.com"
+  });
+
+  const stream = await client.chat.completions.create({
+    model: process.env.DEEPSEEK_MODEL || "deepseek-v4-flash",
+    messages: [
+      {
+        role: "user",
+        content: buildTextPrompt(input)
+      }
+    ],
+    temperature: 0.1,
+    stream: true
+  });
+
+  await parseStreamBlocks(stream, onBlock, input);
+}
+
+async function streamWithGpt(input, onBlock) {
+  if (!process.env.OPENAI_API_KEY) {
+    throwHttp(500, "MODEL_NOT_CONFIGURED", "OPENAI_API_KEY is not configured");
+  }
+
+  const client = new OpenAI({
+    apiKey: process.env.OPENAI_API_KEY
+  });
+
+  const stream = await client.responses.create({
+    model: process.env.OPENAI_TEXT_MODEL || process.env.OPENAI_VISION_MODEL || "gpt-5.4-nano",
+    input: buildTextPrompt(input),
+    temperature: 0.1,
+    stream: true
+  });
+
+  await parseStreamBlocks(stream, onBlock, input);
+}
+
+async function parseStreamBlocks(stream, onBlock, input) {
+  let buffer = "";
+  const knownBlocks = new Map(); // id -> translatedText (partial)
+  let currentId = null;
+
+  for await (const chunk of stream) {
+    // OpenAI chat completion streaming
+    const delta = chunk?.choices?.[0]?.delta?.content ||
+                  // OpenAI response API streaming
+                  chunk?.type === "response.output_text.delta" ? chunk?.delta : "" ||
+                  // Fallback
+                  "";
+
+    if (!delta) continue;
+
+    buffer += delta;
+
+    // Check for complete blocks in buffer
+    checkBufferForBlocks(buffer, onBlock, knownBlocks, input);
+  }
+
+  // Final flush: send any remaining complete blocks
+  checkBufferForBlocks(buffer, onBlock, knownBlocks, input);
+
+  // Send all remaining incomplete blocks (force flush last content)
+  for (const [id, text] of knownBlocks) {
+    if (text.trim()) {
+      onBlock({
+        id,
+        translatedText: text.trim()
+      });
+    }
+  }
+}
+
+function checkBufferForBlocks(buffer, onBlock, knownBlocks, input) {
+  // Find all GT_BLOCK markers and extract their content
+  const markerRegex = /\[\[GT_BLOCK:([^\]]+)\]\]([\s\S]*?)(?=\[\[GT_BLOCK:|\[\[\/GT_BLOCK\]\]|$)/g;
+  let match;
+
+  while ((match = markerRegex.exec(buffer)) !== null) {
+    const id = String(match[1]).trim();
+    const partialText = String(match[2] || "").trim();
+
+    if (!id) continue;
+
+    const prevText = knownBlocks.get(id) || "";
+    if (partialText.length > prevText.length) {
+      knownBlocks.set(id, partialText);
+    }
+  }
+
+  // Find completed blocks (contain closing tag)
+  const completedRegex = /\[\[GT_BLOCK:([^\]]+)\]\]([\s\S]*?)\[\[\/GT_BLOCK\]\]/g;
+  let completedMatch;
+
+  while ((completedMatch = completedRegex.exec(buffer)) !== null) {
+    const id = String(completedMatch[1]).trim();
+    const text = String(completedMatch[2]).trim();
+
+    if (id && text && !knownBlocks.has("completed_" + id)) {
+      knownBlocks.set("completed_" + id, true);
+      onBlock({
+        id,
+        translatedText: text
+      });
+    }
+  }
 }
 
 function throwHttp(status, code, message) {

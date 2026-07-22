@@ -30,7 +30,7 @@
   const CAPTURE_MODE_STORAGE_KEY = "glassTranslateCaptureMode";
   const DEFAULT_LANGUAGE = "English";
   const DEFAULT_MODEL = "deepseek";
-  const DEFAULT_CAPTURE_MODE = "text";
+  const DEFAULT_CAPTURE_MODE = "ocr";
   const APP_VERSION = getExtensionVersion();
 
   const LANGUAGE_OPTIONS = [
@@ -226,18 +226,23 @@
   root.innerHTML = `
     <div class="glass-window" role="dialog" aria-label="Glass Translate">
       <div class="glass-panel">
-        <button class="translate-button" type="button" title="" aria-label="" data-i18n="translate"></button>
-        <button class="clear-button" type="button" data-i18n="clear"></button>
-        <select id="glass-target-language" class="target-language" aria-label="Language">
-          ${buildLanguageOptions(DEFAULT_LANGUAGE)}
-        </select>
-        <button class="settings-button" type="button" data-i18n="settings"></button>
-        <button class="close-button" type="button" title="" aria-label="">
-          <svg viewBox="0 0 24 24" aria-hidden="true">
-            <path d="M18 6 6 18M6 6l12 12"></path>
-          </svg>
-        </button>
-        <div class="toolbar-drag-space" aria-hidden="true"></div>
+        <div class="glass-panel-row">
+          <button class="settings-button" type="button" data-i18n="settings"></button>
+          <select id="glass-target-language" class="target-language" aria-label="Language">
+            ${buildLanguageOptions(DEFAULT_LANGUAGE)}
+          </select>
+          <select id="glass-capture-mode" class="capture-mode-inline" aria-label="">
+            ${buildCaptureModeOptions(DEFAULT_CAPTURE_MODE)}
+          </select>
+          <button class="translate-button" type="button" title="" aria-label="" data-i18n="translate"></button>
+          <button class="clear-button" type="button" data-i18n="clear"></button>
+          <button class="close-button" type="button" title="" aria-label="">
+            <svg viewBox="0 0 24 24" aria-hidden="true">
+              <path d="M18 6 6 18M6 6l12 12"></path>
+            </svg>
+          </button>
+          <div class="toolbar-drag-space" aria-hidden="true"></div>
+        </div>
 
         <div class="settings-panel" data-settings-panel hidden>
           <div class="settings-version">Glass Translate v${APP_VERSION}</div>
@@ -247,13 +252,13 @@
               ${buildLanguageOptions(DEFAULT_LANGUAGE)}
             </select>
           </div>
-          <div class="settings-field">
+          <div class="settings-field" hidden>
             <label for="glass-model" data-i18n="defaultModel"></label>
             <select id="glass-model" class="model-select">
               ${buildModelOptions(DEFAULT_MODEL)}
             </select>
           </div>
-          <div class="settings-field">
+          <div class="settings-field" hidden>
             <label for="glass-capture-mode" data-i18n="captureMode"></label>
             <select id="glass-capture-mode" class="capture-mode-select">
               ${buildCaptureModeOptions(DEFAULT_CAPTURE_MODE)}
@@ -261,9 +266,9 @@
           </div>
           <button class="save-settings-button" type="button" data-i18n="save"></button>
         </div>
-
-        <div class="status" aria-live="polite"></div>
       </div>
+
+      <div class="status" aria-live="polite"></div>
 
       <div class="glass-area" data-glass-area>
         <div class="translation-layer" data-translation-layer></div>
@@ -278,6 +283,8 @@
       <div class="resize-handle resize-se" data-resize="se"></div>
       <div class="resize-handle resize-sw" data-resize="sw"></div>
     </div>
+
+    <div class="status" aria-live="polite"></div>
   `;
 
   document.documentElement.appendChild(root);
@@ -295,7 +302,7 @@
   const targetLanguageInput = root.querySelector(".target-language");
   const defaultLanguageInput = root.querySelector(".default-language");
   const modelInput = root.querySelector(".model-select");
-  const captureModeInput = root.querySelector(".capture-mode-select");
+  const captureModeInput = root.querySelector(".capture-mode-inline")
 
   let dragging = false;
   let resizing = null;
@@ -306,6 +313,7 @@
 
   applyToolLanguage(DEFAULT_LANGUAGE);
   applyDefaultModel(DEFAULT_MODEL);
+  applyCaptureMode(DEFAULT_CAPTURE_MODE);
   loadDefaults();
   warmApi();
 
@@ -390,6 +398,10 @@
     settingsPanel.hidden = !settingsPanel.hidden;
   });
 
+  captureModeInput.addEventListener("change", () => {
+    // Mode change handled via captureModeInput.value when translating
+  });
+
   saveSettingsButton.addEventListener("click", async () => {
     const defaultLanguage = defaultLanguageInput.value;
     const defaultModel = modelInput.value;
@@ -429,7 +441,7 @@
         result = await requestOcrTranslation({
           image,
           targetLanguage: targetLanguageInput.value,
-          model: modelInput.value,
+          model: "gpt",
           viewport
         });
       } else {
@@ -439,22 +451,25 @@
           throw new Error(activeText().noPageText);
         }
         showStatusStep("stepSending", "textReady", { count: blocks.length });
-        result = await requestTextTranslation({
+        await requestTextTranslationStream({
           blocks,
           targetLanguage: targetLanguageInput.value,
-          model: modelInput.value,
+          model: "deepseek",
           viewport
         });
+        result = null; // stream handles rendering
       }
 
-      if (!result.success) {
+      if (captureMode !== "text" && result && !result.success) {
         throw new Error(result.message || activeText().translateFailed);
       }
 
-      showStatusStep("stepRendering", "renderingTranslation");
-      renderTranslationBlocks(result.blocks || [], captureMode);
-      glassArea.classList.toggle("has-translation", Boolean(result.blocks?.length));
-      status.textContent = result.blocks?.length ? "" : activeText().noText;
+      if (captureMode !== "text") {
+        showStatusStep("stepRendering", "renderingTranslation");
+        renderTranslationBlocks(result.blocks || [], captureMode);
+        glassArea.classList.toggle("has-translation", Boolean(result.blocks?.length));
+        status.textContent = result.blocks?.length ? "" : activeText().noText;
+      }
     } catch (error) {
       console.error(error);
       status.textContent = error.message || activeText().translateFailed;
@@ -637,6 +652,89 @@
     return data;
   }
 
+  async function requestTextTranslationStream(payload) {
+    if (!payload.blocks.length) {
+      throw new Error(activeText().noPageText);
+    }
+
+    const response = await fetch(`${TEXT_API_URL}/stream`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify(payload)
+    });
+
+    if (!response.ok) {
+      const data = await response.json().catch(() => null);
+      throw new Error(data?.message || `${activeText().requestFailed}: ${response.status}`);
+    }
+
+    const reader = response.body.getReader();
+    const decoder = new TextDecoder();
+    let buffer = "";
+    let receivedCount = 0;
+
+    // Prepare translation layer
+    translationLayer.innerHTML = "";
+    glassArea.classList.remove("has-translation");
+
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+
+      buffer += decoder.decode(value, { stream: true });
+
+      // Parse SSE events from buffer
+      const events = buffer.split("\n\n");
+      buffer = events.pop() || ""; // Keep incomplete event in buffer
+
+      for (const eventBlock of events) {
+        const lines = eventBlock.split("\n");
+        let eventType = "";
+        let dataStr = "";
+
+        for (const line of lines) {
+          if (line.startsWith("event: ")) {
+            eventType = line.slice(7).trim();
+          } else if (line.startsWith("data: ")) {
+            dataStr = line.slice(6).trim();
+          }
+        }
+
+        if (!dataStr) continue;
+
+        try {
+          const parsed = JSON.parse(dataStr);
+
+          if (eventType === "start") {
+            showStatusStep("stepSending", "streamStarted", { count: parsed.count });
+          } else if (eventType === "block") {
+            receivedCount++;
+            const block = parsed.block;
+            if (block && block.id && block.translatedText) {
+              renderTranslationBlock(block, captureModeInput.value);
+              glassArea.classList.add("has-translation");
+              showStatusStep("stepRendering", "streamProgress", {
+                current: receivedCount,
+                total: parsed.totalBlocks
+              });
+            }
+          } else if (eventType === "complete") {
+            showStatusStep("stepComplete", "complete");
+            status.textContent = receivedCount > 0 ? "" : activeText().noText;
+          } else if (eventType === "error") {
+            throw new Error(parsed.message || activeText().translateFailed);
+          }
+        } catch (e) {
+          if (e.message !== activeText().translateFailed) {
+            console.warn("SSE parse error:", e);
+          }
+        }
+      }
+    }
+  }
+
   function warmApi() {
     fetch(API_HEALTH_URL, {
       method: "GET",
@@ -756,6 +854,55 @@
 
     if (verticalGap >= Math.max(8, lineHeight * TEXT_PARAGRAPH_GAP_RATIO)) return "\n\n";
     return "\n";
+  }
+
+  function renderTranslationBlock(block, mode = "ocr") {
+    if (!block || !block.id) return;
+
+    // Reuse existing element or create new
+    let el = translationLayer.querySelector(`[data-block-id="${block.id}"]`);
+    if (!el) {
+      el = document.createElement("div");
+      el.dataset.blockId = block.id;
+      translationLayer.appendChild(el);
+
+      if (mode === "text") {
+        el.className = "translation-block translation-block-flow";
+      } else {
+        el.className = "translation-block";
+      }
+    }
+
+    el.textContent = block.translatedText || "";
+
+    // Only apply positioning for OCR mode (text mode uses flow layout)
+    if (mode !== "text") {
+      const layerWidth = Math.max(0, glassArea.clientWidth - TRANSLATION_PADDING * 2);
+      const layerHeight = Math.max(0, glassArea.clientHeight - TRANSLATION_PADDING * 2);
+      const left = clamp(toNumber(block.x, 0), 0, layerWidth);
+      const top = clamp(toNumber(block.y, 0), 0, layerHeight);
+      const maxWidth = top < TRANSLATE_BUTTON_SAFE_HEIGHT
+        ? Math.max(24, layerWidth - left - TRANSLATE_BUTTON_SAFE_WIDTH)
+        : Math.max(24, layerWidth - left);
+      const width = clamp(toNumber(block.width, 120), 24, maxWidth);
+
+      Object.assign(el.style, {
+        left: `${TRANSLATION_PADDING + left}px`,
+        top: `${TRANSLATION_PADDING + top}px`,
+        width: `${width}px`,
+        minHeight: `${Math.max(toNumber(block.height, 24), 18)}px`,
+        fontSize: `${clamp(toNumber(block.fontSize, 16), 8, 24)}px`,
+        lineHeight: `${clamp(toNumber(block.lineHeight, 22), 12, 64)}px`,
+        textAlign: normalizeAlign(block.align)
+      });
+    } else {
+      // Flow mode: position by order
+      const indent = clamp(toNumber(block.x, 0), 0, Math.min(TEXT_FLOW_MAX_INDENT, glassArea.clientWidth * 0.22));
+      el.style.fontSize = `${clamp(toNumber(block.fontSize, 16), 8, 15)}px`;
+      el.style.lineHeight = "1.55";
+      el.style.marginLeft = `${indent}px`;
+      el.style.maxWidth = `calc(100% - ${indent}px)`;
+    }
   }
 
   function renderTranslationBlocks(blocks, mode = "ocr") {
