@@ -438,12 +438,13 @@
         showStatusStep("stepCapturingImage", "capturingImage");
         const image = await cropGlassArea(await captureVisibleTab());
         showStatusStep("stepSending", "imageReady");
-        result = await requestOcrTranslation({
+        await requestOcrTranslationStream({
           image,
           targetLanguage: targetLanguageInput.value,
           model: "gpt",
           viewport
         });
+        result = null;
       } else {
         showStatusStep("stepReadingText", "readingText");
         const blocks = collectTextBlocksFromGlassArea();
@@ -460,12 +461,13 @@
         result = null; // stream handles rendering
       }
 
-      if (captureMode !== "text" && result && !result.success) {
-        throw new Error(result.message || activeText().translateFailed);
-      }
-
-      if (captureMode !== "text") {
+      // Stream modes (text and ocr) handle rendering themselves.
+      // Only non-streamed results go through the old batch rendering path.
+      if (result) {
         showStatusStep("stepRendering", "renderingTranslation");
+        if (!result.success) {
+          throw new Error(result.message || activeText().translateFailed);
+        }
         renderTranslationBlocks(result.blocks || [], captureMode);
         glassArea.classList.toggle("has-translation", Boolean(result.blocks?.length));
         status.textContent = result.blocks?.length ? "" : activeText().noText;
@@ -714,6 +716,80 @@
             const block = parsed.block;
             if (block && block.id && block.translatedText) {
               renderTranslationBlock(block, captureModeInput.value);
+              glassArea.classList.add("has-translation");
+              showStatusStep("stepRendering", "streamProgress", {
+                current: receivedCount,
+                total: parsed.totalBlocks
+              });
+            }
+          } else if (eventType === "complete") {
+            showStatusStep("stepComplete", "complete");
+            status.textContent = receivedCount > 0 ? "" : activeText().noText;
+          } else if (eventType === "error") {
+            throw new Error(parsed.message || activeText().translateFailed);
+          }
+        } catch (e) {
+          if (e.message !== activeText().translateFailed) {
+            console.warn("SSE parse error:", e);
+          }
+        }
+      }
+    }
+  }
+
+  async function requestOcrTranslationStream(payload) {
+    const response = await fetch(`${API_URL}/stream`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify(payload)
+    });
+
+    if (!response.ok) {
+      const data = await response.json().catch(() => null);
+      throw new Error(data?.message || `${activeText().requestFailed}: ${response.status}`);
+    }
+
+    const reader = response.body.getReader();
+    const decoder = new TextDecoder();
+    let buffer = "";
+    let receivedCount = 0;
+
+    translationLayer.innerHTML = "";
+    glassArea.classList.remove("has-translation");
+
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+
+      buffer += decoder.decode(value, { stream: true });
+
+      const events = buffer.split("\n\n");
+      buffer = events.pop() || "";
+
+      for (const eventBlock of events) {
+        const lines = eventBlock.split("\n");
+        let eventType = "";
+        let dataStr = "";
+
+        for (const line of lines) {
+          if (line.startsWith("event: ")) eventType = line.slice(7).trim();
+          else if (line.startsWith("data: ")) dataStr = line.slice(6).trim();
+        }
+
+        if (!dataStr) continue;
+
+        try {
+          const parsed = JSON.parse(dataStr);
+
+          if (eventType === "start") {
+            showStatusStep("stepSending", "streamStarted", { count: parsed.count });
+          } else if (eventType === "block") {
+            receivedCount++;
+            const block = parsed.block;
+            if (block && block.id && block.translatedText) {
+              renderTranslationBlock(block, "ocr");
               glassArea.classList.add("has-translation");
               showStatusStep("stepRendering", "streamProgress", {
                 current: receivedCount,

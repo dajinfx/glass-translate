@@ -2,6 +2,7 @@ import { translateWithDeepSeek } from "./deepseekVision.js";
 import { translateWithGeminiVision } from "./geminiVision.js";
 import { translateWithGptVision } from "./gptVision.js";
 import { translateTextBlocks, streamTranslateTextBlocks } from "./textTranslate.js";
+import { streamGptVision } from "./gptVision.js";
 
 export async function translateWithModel(input) {
   switch (input.model) {
@@ -18,6 +19,10 @@ export async function translateWithModel(input) {
 
 export async function translateTextWithModel(input) {
   return translateTextBlocks(input);
+}
+
+export async function streamTranslateImage(input, onBlock) {
+  return streamGptVision(input, onBlock);
 }
 
 export { streamTranslateTextBlocks };
