@@ -249,6 +249,16 @@ async function streamWithGpt(input, onBlock) {
 async function parseStreamBlocks(stream, onBlock, input) {
   let buffer = "";
   const sentBlockIds = new Set();
+  // Build id map from input blocks so we can fix DeepSeek's block ids
+  const inputBlocks = (input.blocks || []);
+  const inputIdMap = new Map();
+  inputBlocks.forEach((b, i) => {
+    // Store both the original id and positional index
+    inputIdMap.set(b.id, b.id);
+    inputIdMap.set(`text_${i + 1}`, b.id);
+    inputIdMap.set(`block_${i + 1}`, b.id);
+    inputIdMap.set(`ext_${i + 1}`, b.id);
+  });
 
   for await (const chunk of stream) {
     let delta = "";
@@ -266,11 +276,11 @@ async function parseStreamBlocks(stream, onBlock, input) {
     buffer += delta;
 
     // Scan buffer for completed GT_BLOCKs
-    scanCompletedBlocks(buffer, onBlock, sentBlockIds);
+    scanCompletedBlocks(buffer, onBlock, sentBlockIds, inputIdMap);
   }
 }
 
-function scanCompletedBlocks(buffer, onBlock, sentBlockIds) {
+function scanCompletedBlocks(buffer, onBlock, sentBlockIds, inputIdMap) {
   let pos = 0;
   while (pos < buffer.length) {
     const startIdx = buffer.indexOf("[[GT_BLOCK:", pos);
@@ -280,8 +290,8 @@ function scanCompletedBlocks(buffer, onBlock, sentBlockIds) {
     const idEnd = buffer.indexOf("]]", idStart);
     if (idEnd === -1) break;
 
-    const id = buffer.slice(idStart, idEnd).trim();
-    if (!id) { pos = idEnd + 2; continue; }
+    const rawId = buffer.slice(idStart, idEnd).trim();
+    if (!rawId) { pos = idEnd + 2; continue; }
 
     const contentStart = idEnd + 2;
     const endTag = "[[/GT_BLOCK]]";
@@ -289,6 +299,9 @@ function scanCompletedBlocks(buffer, onBlock, sentBlockIds) {
     if (tagIdx === -1) break;
 
     const text = buffer.slice(contentStart, tagIdx).trim();
+
+    // Map DeepSeek's id back to the original input block id
+    const id = inputIdMap.get(rawId) || rawId;
 
     if (text && !sentBlockIds.has(id)) {
       sentBlockIds.add(id);

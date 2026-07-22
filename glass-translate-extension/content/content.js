@@ -659,6 +659,10 @@
       throw new Error(activeText().noPageText);
     }
 
+    // Clear translation layer BEFORE fetch
+    translationLayer.innerHTML = "";
+    glassArea.classList.remove("has-translation");
+
     const response = await fetch(`${TEXT_API_URL}/stream`, {
       method: "POST",
       headers: {
@@ -676,10 +680,6 @@
     const decoder = new TextDecoder();
     let buffer = "";
     let receivedCount = 0;
-
-    // Prepare translation layer
-    translationLayer.innerHTML = "";
-    glassArea.classList.remove("has-translation");
 
     while (true) {
       const { done, value } = await reader.read();
@@ -738,6 +738,10 @@
   }
 
   async function requestOcrTranslationStream(payload) {
+    // Clear translation layer BEFORE fetch
+    translationLayer.innerHTML = "";
+    glassArea.classList.remove("has-translation");
+
     const response = await fetch(`${API_URL}/stream`, {
       method: "POST",
       headers: {
@@ -755,9 +759,6 @@
     const decoder = new TextDecoder();
     let buffer = "";
     let receivedCount = 0;
-
-    translationLayer.innerHTML = "";
-    glassArea.classList.remove("has-translation");
 
     while (true) {
       const { done, value } = await reader.read();
