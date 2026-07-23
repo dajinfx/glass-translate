@@ -965,6 +965,12 @@
   function renderTranslationBlock(block, mode = "ocr") {
     if (!block || !block.id) return;
 
+    // Map upstream ids (ext_N, block_N, etc.) to local text_N format
+    const idMatch = block.id.match(/^(?:ext|block|text)_(\d+)$/);
+    if (idMatch) {
+      block.id = `text_${idMatch[1]}`;
+    }
+
     // Reuse existing element or create new
     let el = translationLayer.querySelector(`[data-block-id="${block.id}"]`);
     if (!el) {
