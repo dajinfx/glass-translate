@@ -968,8 +968,12 @@
 
       if (mode === "text") {
         el.className = "translation-block translation-block-flow";
+        translationLayer.classList.add("is-flow");
+        translationLayer.style.padding = "22px 26px";
       } else {
         el.className = "translation-block";
+        translationLayer.classList.remove("is-flow");
+        translationLayer.style.padding = "";
       }
     }
 
