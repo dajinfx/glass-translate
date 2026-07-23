@@ -20,7 +20,7 @@
   left: 15%;
   top: 15%;
   display: block;
-  width: min(980px, calc(100vw - 32px));
+  width: min(653px, calc(66.67vw - 32px));
   height: min(140px, calc(50vh - 32px));
   min-width: 240px;
   min-height: 40px;
