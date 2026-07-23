@@ -128,6 +128,14 @@
   padding: 18px 22px;
 }
 
+#glass-translate-root .translation-layer.is-flow .translation-block-flow:first-child {
+  margin-top: 8px;
+}
+
+#glass-translate-root .translation-layer.is-flow .translation-block-flow {
+  margin-left: 12px;
+}
+
 #glass-translate-root .translation-block {
   position: absolute;
   padding: 2px 4px;

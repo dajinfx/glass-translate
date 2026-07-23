@@ -27,6 +27,7 @@
   const TEXT_FLOW_MAX_INDENT = 140;
   const DEFAULT_LANGUAGE_STORAGE_KEY = "glassTranslateDefaultLanguage";
   const DEFAULT_MODEL_STORAGE_KEY = "glassTranslateDefaultModel";
+  const DEFAULT_MODE_STORAGE_KEY = "glassTranslateDefaultMode";
   const CAPTURE_MODE_STORAGE_KEY = "glassTranslateCaptureMode";
   const DEFAULT_LANGUAGE = "English";
   const DEFAULT_MODEL = "deepseek";
@@ -86,6 +87,9 @@
       settings: "Settings",
       defaultLanguage: "Default language",
       defaultModel: "Default model",
+      defaultMode: "Default mode",
+      modeText: "Page text",
+      modeOcr: "Image capture",
       captureMode: "Capture mode",
       save: "Save",
       saved: "Saved",
@@ -183,6 +187,9 @@
       settings: "Einstellungen",
       defaultLanguage: "Standardsprache",
       defaultModel: "Standardmodell",
+      defaultMode: "Standardmodus",
+      modeText: "Seitentext",
+      modeOcr: "Bildaufnahme",
       captureMode: "Erfassungsmodus",
       save: "Speichern",
       saved: "Gespeichert",
@@ -204,6 +211,9 @@
       settings: "Configuracion",
       defaultLanguage: "Idioma predeterminado",
       defaultModel: "Modelo predeterminado",
+      defaultMode: "Modo predeterminado",
+      modeText: "Texto de página",
+      modeOcr: "Captura de imagen",
       captureMode: "Modo de captura",
       save: "Guardar",
       saved: "Guardado",
@@ -258,6 +268,13 @@
               ${buildModelOptions(DEFAULT_MODEL)}
             </select>
           </div>
+          <div class="settings-field">
+            <label for="glass-default-mode" data-i18n="defaultMode"></label>
+            <select id="glass-default-mode" class="default-mode-select">
+              <option value="text" data-i18n="modeText"></option>
+              <option value="ocr" data-i18n="modeOcr"></option>
+            </select>
+          </div>
           <div class="settings-field" hidden>
             <label for="glass-capture-mode" data-i18n="captureMode"></label>
             <select id="glass-capture-mode" class="capture-mode-select">
@@ -302,6 +319,7 @@
   const targetLanguageInput = root.querySelector(".target-language");
   const defaultLanguageInput = root.querySelector(".default-language");
   const modelInput = root.querySelector(".model-select");
+  const defaultModeInput = root.querySelector(".default-mode-select");
   const captureModeInput = root.querySelector(".capture-mode-inline")
 
   let dragging = false;
@@ -314,6 +332,11 @@
   applyToolLanguage(DEFAULT_LANGUAGE);
   applyDefaultModel(DEFAULT_MODEL);
   applyCaptureMode(DEFAULT_CAPTURE_MODE);
+
+    // Sync defaultMode select on startup
+    if (defaultModeInput) {
+      defaultModeInput.value = captureModeInput.value;
+    }
   loadDefaults();
   warmApi();
 
@@ -399,7 +422,7 @@
   });
 
   captureModeInput.addEventListener("change", () => {
-    // Mode change handled via captureModeInput.value when translating
+    if (defaultModeInput) defaultModeInput.value = captureModeInput.value;
   });
 
   saveSettingsButton.addEventListener("click", async () => {
@@ -1161,6 +1184,7 @@
   async function loadDefaults() {
     const defaultLanguage = await getStoredValue(DEFAULT_LANGUAGE_STORAGE_KEY);
     const defaultModel = await getStoredValue(DEFAULT_MODEL_STORAGE_KEY);
+    const defaultMode = await getStoredValue(DEFAULT_MODE_STORAGE_KEY);
     const captureMode = await getStoredValue(CAPTURE_MODE_STORAGE_KEY);
 
     if (defaultLanguage) {
@@ -1259,7 +1283,9 @@
 
   function applyCaptureMode(mode) {
     const allowedModes = new Set(["text", "ocr"]);
-    captureModeInput.value = allowedModes.has(mode) ? mode : DEFAULT_CAPTURE_MODE;
+    const m = allowedModes.has(mode) ? mode : DEFAULT_CAPTURE_MODE;
+    captureModeInput.value = m;
+    if (defaultModeInput) defaultModeInput.value = m;
   }
 
   function normalizeLanguageValue(value) {
