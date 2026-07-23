@@ -22,7 +22,7 @@
   display: block;
   width: min(980px, calc(100vw - 32px));
   height: min(140px, calc(50vh - 32px));
-  min-width: 360px;
+  min-width: 240px;
   min-height: 40px;
   border: 2px solid rgba(100, 116, 139, 0.52);
   border-radius: 8px;
