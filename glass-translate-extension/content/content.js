@@ -10,7 +10,7 @@
   const API_URL = "https://glass-translate-api.onrender.com/api/translate-image";
   const TEXT_API_URL = "https://glass-translate-api.onrender.com/api/translate-text";
   const API_HEALTH_URL = "https://glass-translate-api.onrender.com/health";
-  const MIN_WIDTH = 360;
+  const MIN_WIDTH = 240;
   const MIN_HEIGHT = 40;
   const EDGE_MARGIN = 8;
   const RIGHT_EDGE_MARGIN = 0;
