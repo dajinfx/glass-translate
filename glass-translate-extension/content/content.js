@@ -271,8 +271,8 @@
           <div class="settings-field">
             <label for="glass-default-mode" data-i18n="defaultMode"></label>
             <select id="glass-default-mode" class="default-mode-select">
-              <option value="text" data-i18n="modeText">Page text</option>
-              <option value="ocr" data-i18n="modeOcr">Image capture</option>
+              <option value="text">网页文本 (Page text)</option>
+              <option value="ocr">截图翻译 (Image capture)</option>
             </select>
           </div>
           <div class="settings-field" hidden>
@@ -1206,12 +1206,7 @@
     defaultLanguageInput.value = currentLanguage;
 
     root.querySelectorAll("[data-i18n]").forEach((element) => {
-      const text = copy[element.dataset.i18n] || "";
-      if (element.tagName === "OPTION") {
-        element.textContent = text;
-      } else {
-        element.textContent = text;
-      }
+      element.textContent = copy[element.dataset.i18n] || element.textContent || "";
     });
 
     translateButton.title = copy.translate;
