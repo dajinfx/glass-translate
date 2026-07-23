@@ -271,8 +271,8 @@
           <div class="settings-field">
             <label for="glass-default-mode" data-i18n="defaultMode"></label>
             <select id="glass-default-mode" class="default-mode-select">
-              <option value="text" data-i18n="modeText"></option>
-              <option value="ocr" data-i18n="modeOcr"></option>
+              <option value="text" data-i18n="modeText">Page text</option>
+              <option value="ocr" data-i18n="modeOcr">Image capture</option>
             </select>
           </div>
           <div class="settings-field" hidden>
@@ -1054,6 +1054,7 @@
 
   function renderFlowTranslationBlocks(blocks) {
     translationLayer.classList.add("is-flow");
+    translationLayer.style.padding = "22px 26px";
     const visibleBlocks = (Array.isArray(blocks) ? blocks : [])
       .filter((block) => isMeaningfulText(block?.translatedText || block?.sourceText))
       .sort((a, b) => toNumber(a.y, 0) - toNumber(b.y, 0) || toNumber(a.x, 0) - toNumber(b.x, 0));
@@ -1205,7 +1206,12 @@
     defaultLanguageInput.value = currentLanguage;
 
     root.querySelectorAll("[data-i18n]").forEach((element) => {
-      element.textContent = copy[element.dataset.i18n] || "";
+      const text = copy[element.dataset.i18n] || "";
+      if (element.tagName === "OPTION") {
+        element.textContent = text;
+      } else {
+        element.textContent = text;
+      }
     });
 
     translateButton.title = copy.translate;
