@@ -90,6 +90,8 @@
       defaultMode: "Default mode",
       modeText: "Page text",
       modeOcr: "Image capture",
+      modeText: "Page text",
+      modeOcr: "Image capture",
       captureMode: "Capture mode",
       save: "Save",
       saved: "Saved",
@@ -190,6 +192,8 @@
       defaultMode: "Standardmodus",
       modeText: "Seitentext",
       modeOcr: "Bildaufnahme",
+      modeText: "Seitentext",
+      modeOcr: "Bildaufnahme",
       captureMode: "Erfassungsmodus",
       save: "Speichern",
       saved: "Gespeichert",
@@ -212,6 +216,8 @@
       defaultLanguage: "Idioma predeterminado",
       defaultModel: "Modelo predeterminado",
       defaultMode: "Modo predeterminado",
+      modeText: "Texto de página",
+      modeOcr: "Captura de imagen",
       modeText: "Texto de página",
       modeOcr: "Captura de imagen",
       captureMode: "Modo de captura",
@@ -271,8 +277,8 @@
           <div class="settings-field">
             <label for="glass-default-mode" data-i18n="defaultMode"></label>
             <select id="glass-default-mode" class="default-mode-select">
-              <option value="text">网页文本 (Page text)</option>
-              <option value="ocr">截图翻译 (Image capture)</option>
+              <option value="text" data-i18n="modeText">网页文本</option>
+              <option value="ocr" data-i18n="modeOcr">截图翻译</option>
             </select>
           </div>
           <div class="settings-field" hidden>
