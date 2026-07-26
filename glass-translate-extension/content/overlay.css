@@ -20,9 +20,10 @@
   left: 15%;
   top: 15%;
   display: block;
-  width: min(653px, calc(66.67vw - 32px));
+  width: fit-content;
+  max-width: calc(100vw - 32px);
   height: min(140px, calc(50vh - 32px));
-  min-width: 240px;
+  min-width: 520px;
   min-height: 40px;
   border: 2px solid rgba(100, 116, 139, 0.52);
   border-radius: 8px;
