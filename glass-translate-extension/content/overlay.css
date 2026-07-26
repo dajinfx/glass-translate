@@ -204,6 +204,7 @@
   display: block;
   width: auto;
   min-width: 78px;
+  flex-shrink: 0;
   height: 28px;
   appearance: none;
   -webkit-appearance: none;
@@ -501,6 +502,7 @@
 
 #glass-translate-root .capture-mode-inline {
   width: 105px;
+  flex-shrink: 0;
 }
 
 #glass-translate-root .minimize-button {
