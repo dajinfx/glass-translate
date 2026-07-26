@@ -503,8 +503,7 @@
   width: 85px;
 }
 
-#glass-translate-root .minimize-button,
-#glass-translate-root .maximize-button {
+#glass-translate-root .minimize-button {
   width: 28px;
   height: 28px;
   margin: 0;
@@ -520,15 +519,13 @@
   transition: background 0.15s, border-color 0.15s;
 }
 
-#glass-translate-root .minimize-button:hover,
-#glass-translate-root .maximize-button:hover {
+#glass-translate-root .minimize-button:hover {
   background: rgba(100, 116, 139, 0.18);
   border-color: rgba(100, 116, 139, 0.5);
   color: #475569;
 }
 
-#glass-translate-root .minimize-button svg,
-#glass-translate-root .maximize-button svg {
+#glass-translate-root .minimize-button svg {
   width: 14px;
   height: 14px;
   fill: none;

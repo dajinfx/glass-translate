@@ -258,11 +258,6 @@
               <path d="M5 12h14"></path>
             </svg>
           </button>
-          <button class="maximize-button" type="button" title="" aria-label="" hidden>
-            <svg viewBox="0 0 24 24" aria-hidden="true">
-              <rect x="5" y="5" width="14" height="14" rx="2" fill="none" stroke="currentColor" stroke-width="2"></rect>
-            </svg>
-          </button>
           <button class="close-button" type="button" title="" aria-label="">
             <svg viewBox="0 0 24 24" aria-hidden="true">
               <path d="M18 6 6 18M6 6l12 12"></path>
@@ -328,7 +323,6 @@
   const translateButton = root.querySelector(".translate-button");
   const clearButton = root.querySelector(".clear-button");
   const minimizeButton = root.querySelector(".minimize-button");
-  const maximizeButton = root.querySelector(".maximize-button");
   let preMinimizeHeight = null;
   const closeButton = root.querySelector(".close-button");
   const settingsButton = root.querySelector(".settings-button");
@@ -431,19 +425,21 @@
   }
 
   minimizeButton.addEventListener("click", () => {
-    preMinimizeHeight = glassWindow.offsetHeight;
-    glassWindow.classList.add("is-minimized");
-    minimizeButton.hidden = true;
-    maximizeButton.hidden = false;
-  });
-
-  maximizeButton.addEventListener("click", () => {
-    glassWindow.classList.remove("is-minimized");
-    if (preMinimizeHeight) {
-      glassWindow.style.height = `${preMinimizeHeight}px`;
+    if (glassWindow.classList.contains("is-minimized")) {
+      glassWindow.classList.remove("is-minimized");
+      if (preMinimizeHeight) {
+        glassWindow.style.height = `${preMinimizeHeight}px`;
+      }
+      minimizeButton.querySelector("svg").innerHTML = '<path d="M5 12h14"></path>';
+      minimizeButton.setAttribute("data-i18n", "minimize");
+    } else {
+      preMinimizeHeight = glassWindow.offsetHeight;
+      glassWindow.classList.add("is-minimized");
+      minimizeButton.querySelector("svg").innerHTML = '<rect x="5" y="5" width="14" height="14" rx="2"></rect>';
+      minimizeButton.setAttribute("data-i18n", "maximize");
     }
-    minimizeButton.hidden = false;
-    maximizeButton.hidden = true;
+    minimizeButton.title = activeText()[minimizeButton.dataset.i18n] || "";
+    minimizeButton.setAttribute("aria-label", minimizeButton.title);
   });
 
   closeButton.addEventListener("click", () => {
@@ -1300,8 +1296,8 @@
     translateButton.setAttribute("aria-label", copy.translate);
     closeButton.title = copy.close;
     closeButton.setAttribute("aria-label", copy.close);
-    if (minimizeButton) { minimizeButton.title = copy.minimize || ""; minimizeButton.setAttribute("aria-label", copy.minimize || ""); }
-    if (maximizeButton) { maximizeButton.title = copy.maximize || ""; maximizeButton.setAttribute("aria-label", copy.maximize || ""); }
+    if (minimizeButton) { let key = minimizeButton.dataset.i18n || "minimize"; minimizeButton.title = copy[key] || ""; minimizeButton.setAttribute("aria-label", copy[key] || ""); }
+    
   }
 
   function activeText() {
