@@ -148,6 +148,57 @@
   color: #b91c1c;
 }
 
+#glass-translate-root .minimize-button,
+#glass-translate-root .maximize-button {
+  width: 28px;
+  height: 28px;
+  margin: 0;
+  padding: 2px;
+  border: 1px solid rgba(100, 116, 139, 0.3);
+  border-radius: 6px;
+  background: rgba(100, 116, 139, 0.08);
+  color: #64748b;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background 0.15s, border-color 0.15s;
+}
+#glass-translate-root .minimize-button:hover,
+#glass-translate-root .maximize-button:hover {
+  background: rgba(100, 116, 139, 0.18);
+  border-color: rgba(100, 116, 139, 0.5);
+  color: #475569;
+}
+#glass-translate-root .minimize-button svg,
+#glass-translate-root .maximize-button svg {
+  width: 14px;
+  height: 14px;
+}
+
+/* Minimized state */
+#glass-translate-root .glass-window.is-minimized .glass-area,
+#glass-translate-root .glass-window.is-minimized .status,
+#glass-translate-root .glass-window.is-minimized .resize-handle {
+  display: none !important;
+}
+#glass-translate-root .glass-window.is-minimized {
+  height: auto !important;
+  min-height: 0 !important;
+}
+
+/* Stop button variant */
+#glass-translate-root .clear-button.is-stop {
+  border-color: rgba(239, 68, 68, 0.45);
+  background: rgba(239, 68, 68, 0.14);
+  color: #dc2626;
+}
+#glass-translate-root .clear-button.is-stop:hover {
+  background: rgba(239, 68, 68, 0.24);
+  border-color: rgba(239, 68, 68, 0.6);
+  color: #b91c1c;
+}
+
 #glass-translate-root .close-button:hover {
   background: #f1f5f9;
   color: #0f172a;
@@ -258,7 +309,7 @@
   z-index: 30;
   display: flex;
   flex-direction: column;
-  gap: 6px;
+  gap: 4px;
   width: max-content;
   max-width: min(560px, calc(100vw - 16px));
   padding: 8px;
