@@ -431,15 +431,15 @@
         glassWindow.style.height = `${preMinimizeHeight}px`;
       }
       minimizeButton.querySelector("svg").innerHTML = '<path d="M5 12h14"></path>';
-      minimizeButton.setAttribute("data-i18n", "minimize");
+      minimizeButton.title = activeText().minimize || "";
+      minimizeButton.setAttribute("aria-label", minimizeButton.title);
     } else {
       preMinimizeHeight = glassWindow.offsetHeight;
       glassWindow.classList.add("is-minimized");
       minimizeButton.querySelector("svg").innerHTML = '<rect x="5" y="5" width="14" height="14" rx="2"></rect>';
-      minimizeButton.setAttribute("data-i18n", "maximize");
+      minimizeButton.title = activeText().maximize || "";
+      minimizeButton.setAttribute("aria-label", minimizeButton.title);
     }
-    minimizeButton.title = activeText()[minimizeButton.dataset.i18n] || "";
-    minimizeButton.setAttribute("aria-label", minimizeButton.title);
   });
 
   closeButton.addEventListener("click", () => {
@@ -1296,7 +1296,7 @@
     translateButton.setAttribute("aria-label", copy.translate);
     closeButton.title = copy.close;
     closeButton.setAttribute("aria-label", copy.close);
-    if (minimizeButton) { let key = minimizeButton.dataset.i18n || "minimize"; minimizeButton.title = copy[key] || ""; minimizeButton.setAttribute("aria-label", copy[key] || ""); }
+    if (minimizeButton) { let key = glassWindow.classList.contains("is-minimized") ? "maximize" : "minimize"; minimizeButton.title = copy[key] || ""; minimizeButton.setAttribute("aria-label", copy[key] || ""); }
     
   }
 
