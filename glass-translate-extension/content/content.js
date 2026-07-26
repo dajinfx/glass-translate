@@ -32,6 +32,7 @@
   const DEFAULT_LANGUAGE = "English";
   const DEFAULT_MODEL = "deepseek";
   const DEFAULT_CAPTURE_MODE = "ocr";
+  let streamAbortController = null;
   const APP_VERSION = getExtensionVersion();
 
   const LANGUAGE_OPTIONS = [
@@ -77,7 +78,7 @@
       canvasFailed: "\u65e0\u6cd5\u521b\u5efa\u622a\u56fe\u753b\u5e03",
       imageLoadFailed: "\u622a\u56fe\u56fe\u7247\u52a0\u8f7d\u5931\u8d25",
       requestFailed: "\u670d\u52a1\u8bf7\u6c42\u5931\u8d25",
-      close: "\u5173\u95ed"
+      close: "\u5173\u95ed", stop: "\u505c\u6b62"
     },
     en: {
       language: "Language",
@@ -116,7 +117,7 @@
       canvasFailed: "Could not create screenshot canvas",
       imageLoadFailed: "Screenshot image failed to load",
       requestFailed: "Service request failed",
-      close: "Close"
+      close: "Close", stop: "Stop"
     },
     ja: {
       language: "\u8a00\u8a9e",
@@ -137,7 +138,7 @@
       canvasFailed: "\u30b9\u30af\u30ea\u30fc\u30f3\u30b7\u30e7\u30c3\u30c8\u7528\u30ad\u30e3\u30f3\u30d0\u30b9\u3092\u4f5c\u6210\u3067\u304d\u307e\u305b\u3093",
       imageLoadFailed: "\u30b9\u30af\u30ea\u30fc\u30f3\u30b7\u30e7\u30c3\u30c8\u753b\u50cf\u306e\u8aad\u307f\u8fbc\u307f\u306b\u5931\u6557\u3057\u307e\u3057\u305f",
       requestFailed: "\u30b5\u30fc\u30d3\u30b9\u30ea\u30af\u30a8\u30b9\u30c8\u306b\u5931\u6557\u3057\u307e\u3057\u305f",
-      close: "\u9589\u3058\u308b"
+      close: "\u9589\u3058\u308b", stop: "\u505c\u6b62"
     },
     ko: {
       language: "\uc5b8\uc5b4",
@@ -158,7 +159,7 @@
       canvasFailed: "\uc2a4\ud06c\ub9b0\uc0f7 \uce94\ubc84\uc2a4\ub97c \ub9cc\ub4e4 \uc218 \uc5c6\uc2b5\ub2c8\ub2e4",
       imageLoadFailed: "\uc2a4\ud06c\ub9b0\uc0f7 \uc774\ubbf8\uc9c0\ub97c \ubd88\ub7ec\uc624\uc9c0 \ubabb\ud588\uc2b5\ub2c8\ub2e4",
       requestFailed: "\uc11c\ube44\uc2a4 \uc694\uccad \uc2e4\ud328",
-      close: "\ub2eb\uae30"
+      close: "\ub2eb\uae30", stop: "\uc911\uc9c0"
     },
     fr: {
       language: "Langue",
@@ -179,7 +180,7 @@
       canvasFailed: "Impossible de creer le canevas",
       imageLoadFailed: "Echec du chargement de l'image",
       requestFailed: "Echec de la requete",
-      close: "Fermer"
+      close: "Fermer", stop: "Arr\u00eater"
     },
     de: {
       language: "Sprache",
@@ -205,7 +206,7 @@
       canvasFailed: "Screenshot-Canvas konnte nicht erstellt werden",
       imageLoadFailed: "Screenshot-Bild konnte nicht geladen werden",
       requestFailed: "Serviceanfrage fehlgeschlagen",
-      close: "Schliessen"
+      close: "Schliessen", stop: "Stopp"
     },
     es: {
       language: "Idioma",
@@ -231,7 +232,7 @@
       canvasFailed: "No se pudo crear el lienzo",
       imageLoadFailed: "No se pudo cargar la imagen",
       requestFailed: "Error de solicitud",
-      close: "Cerrar"
+      close: "Cerrar", stop: "Detener"
     }
   };
 
@@ -402,6 +403,12 @@
         glassWindow.releasePointerCapture(event.pointerId);
       }
     } catch (error) {
+      if (error.name === "AbortError") {
+        streamAbortController = null;
+        status.textContent = activeText().stop;
+        setBusy(false);
+        return;
+      }
       console.debug("Glass Translate pointer release skipped", error);
     }
   }
@@ -412,6 +419,12 @@
   });
 
   clearButton.addEventListener("click", () => {
+    // If translation is in progress, abort it
+    if (streamAbortController) {
+      streamAbortController.abort();
+      return;
+    }
+    // Normal clear
     resetStatusSteps();
     translationLayer.innerHTML = "";
     translationLayer.classList.remove("is-flow");
@@ -489,6 +502,9 @@
         });
         result = null; // stream handles rendering
       }
+
+      // Stream completed successfully, clear abort controller
+      streamAbortController = null;
 
       // Stream modes (text and ocr) handle rendering themselves.
       // Only non-streamed results go through the old batch rendering path.
@@ -692,12 +708,14 @@
     translationLayer.innerHTML = "";
     glassArea.classList.remove("has-translation");
 
+    streamAbortController = new AbortController();
     const response = await fetch(`${TEXT_API_URL}/stream`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json"
       },
-      body: JSON.stringify(payload)
+      body: JSON.stringify(payload),
+      signal: streamAbortController.signal
     });
 
     if (!response.ok) {
@@ -713,6 +731,7 @@
     while (true) {
       const { done, value } = await reader.read();
       if (done) break;
+      if (streamAbortController?.signal.aborted) break;
 
       buffer += decoder.decode(value, { stream: true });
 
@@ -771,12 +790,14 @@
     translationLayer.innerHTML = "";
     glassArea.classList.remove("has-translation");
 
+    streamAbortController = new AbortController();
     const response = await fetch(`${API_URL}/stream`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json"
       },
-      body: JSON.stringify(payload)
+      body: JSON.stringify(payload),
+      signal: streamAbortController.signal
     });
 
     if (!response.ok) {
@@ -792,6 +813,7 @@
     while (true) {
       const { done, value } = await reader.read();
       if (done) break;
+      if (streamAbortController?.signal.aborted) break;
 
       buffer += decoder.decode(value, { stream: true });
 
@@ -1196,6 +1218,15 @@
     translateButton.disabled = isBusy;
     translateButton.classList.toggle("is-loading", isBusy);
     if (message) status.textContent = message;
+    // Toggle clear button to "stop" during translation, "clear" otherwise
+    if (isBusy) {
+      clearButton.setAttribute("data-i18n", "stop");
+      clearButton.classList.add("is-stop");
+    } else {
+      clearButton.setAttribute("data-i18n", "clear");
+      clearButton.classList.remove("is-stop");
+    }
+    applyI18n(clearButton);
   }
 
   async function loadDefaults() {
