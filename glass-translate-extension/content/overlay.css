@@ -58,6 +58,45 @@
   transition: background-color 120ms ease, color 120ms ease, transform 120ms ease;
 }
 
+#glass-translate-root .minimize-button,
+#glass-translate-root .maximize-button {
+  width: 24px;
+  height: 24px;
+  margin: 0 2px;
+  padding: 2px;
+  border: 1px solid rgba(100, 116, 139, 0.3);
+  border-radius: 6px;
+  background: rgba(100, 116, 139, 0.08);
+  color: #64748b;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background 0.15s, border-color 0.15s;
+}
+#glass-translate-root .minimize-button:hover,
+#glass-translate-root .maximize-button:hover {
+  background: rgba(100, 116, 139, 0.18);
+  border-color: rgba(100, 116, 139, 0.5);
+  color: #475569;
+}
+#glass-translate-root .minimize-button svg,
+#glass-translate-root .maximize-button svg {
+  width: 16px;
+  height: 16px;
+}
+
+/* Minimized state: hide everything below toolbar */
+#glass-translate-root .glass-window.is-minimized .glass-area,
+#glass-translate-root .glass-window.is-minimized .status,
+#glass-translate-root .glass-window.is-minimized .resize-handle {
+  display: none !important;
+}
+#glass-translate-root .glass-window.is-minimized {
+  height: auto !important;
+  min-height: 0 !important;
+}
+
 #glass-translate-root .close-button:hover {
   background: #f1f5f9;
   color: #0f172a;

@@ -78,7 +78,7 @@
       canvasFailed: "\u65e0\u6cd5\u521b\u5efa\u622a\u56fe\u753b\u5e03",
       imageLoadFailed: "\u622a\u56fe\u56fe\u7247\u52a0\u8f7d\u5931\u8d25",
       requestFailed: "\u670d\u52a1\u8bf7\u6c42\u5931\u8d25",
-      close: "\u5173\u95ed", stop: "\u505c\u6b62"
+      close: "\u5173\u95ed", stop: "\u505c\u6b62", minimize: "\u6700\u5c0f\u5316", maximize: "\u6700\u5927\u5316"
     },
     en: {
       language: "Language",
@@ -117,7 +117,7 @@
       canvasFailed: "Could not create screenshot canvas",
       imageLoadFailed: "Screenshot image failed to load",
       requestFailed: "Service request failed",
-      close: "Close", stop: "Stop"
+      close: "Close", stop: "Stop", minimize: "Minimize", maximize: "Maximize"
     },
     ja: {
       language: "\u8a00\u8a9e",
@@ -138,7 +138,7 @@
       canvasFailed: "\u30b9\u30af\u30ea\u30fc\u30f3\u30b7\u30e7\u30c3\u30c8\u7528\u30ad\u30e3\u30f3\u30d0\u30b9\u3092\u4f5c\u6210\u3067\u304d\u307e\u305b\u3093",
       imageLoadFailed: "\u30b9\u30af\u30ea\u30fc\u30f3\u30b7\u30e7\u30c3\u30c8\u753b\u50cf\u306e\u8aad\u307f\u8fbc\u307f\u306b\u5931\u6557\u3057\u307e\u3057\u305f",
       requestFailed: "\u30b5\u30fc\u30d3\u30b9\u30ea\u30af\u30a8\u30b9\u30c8\u306b\u5931\u6557\u3057\u307e\u3057\u305f",
-      close: "\u9589\u3058\u308b", stop: "\u505c\u6b62"
+      close: "\u9589\u3058\u308b", stop: "\u505c\u6b62", minimize: "\u6700\u5c0f\u5316", maximize: "\u6700\u5927\u5316"
     },
     ko: {
       language: "\uc5b8\uc5b4",
@@ -159,7 +159,7 @@
       canvasFailed: "\uc2a4\ud06c\ub9b0\uc0f7 \uce94\ubc84\uc2a4\ub97c \ub9cc\ub4e4 \uc218 \uc5c6\uc2b5\ub2c8\ub2e4",
       imageLoadFailed: "\uc2a4\ud06c\ub9b0\uc0f7 \uc774\ubbf8\uc9c0\ub97c \ubd88\ub7ec\uc624\uc9c0 \ubabb\ud588\uc2b5\ub2c8\ub2e4",
       requestFailed: "\uc11c\ube44\uc2a4 \uc694\uccad \uc2e4\ud328",
-      close: "\ub2eb\uae30", stop: "\uc911\uc9c0"
+      close: "\ub2eb\uae30", stop: "\uc911\uc9c0", minimize: "\ucd5c\uc18c\ud654", maximize: "\ucd5c\ub300\ud654"
     },
     fr: {
       language: "Langue",
@@ -180,7 +180,7 @@
       canvasFailed: "Impossible de creer le canevas",
       imageLoadFailed: "Echec du chargement de l'image",
       requestFailed: "Echec de la requete",
-      close: "Fermer", stop: "Arr\u00eater"
+      close: "Fermer", stop: "Arr\u00eater", minimize: "R\u00e9duire", maximize: "Agrandir"
     },
     de: {
       language: "Sprache",
@@ -206,7 +206,7 @@
       canvasFailed: "Screenshot-Canvas konnte nicht erstellt werden",
       imageLoadFailed: "Screenshot-Bild konnte nicht geladen werden",
       requestFailed: "Serviceanfrage fehlgeschlagen",
-      close: "Schliessen", stop: "Stopp"
+      close: "Schliessen", stop: "Stopp", minimize: "Minimieren", maximize: "Maximieren"
     },
     es: {
       language: "Idioma",
@@ -232,7 +232,7 @@
       canvasFailed: "No se pudo crear el lienzo",
       imageLoadFailed: "No se pudo cargar la imagen",
       requestFailed: "Error de solicitud",
-      close: "Cerrar", stop: "Detener"
+      close: "Cerrar", stop: "Detener", minimize: "Minimizar", maximize: "Maximizar"
     }
   };
 
@@ -253,6 +253,16 @@
           </select>
           <button class="translate-button" type="button" title="" aria-label="" data-i18n="translate"></button>
           <button class="clear-button" type="button" data-i18n="clear"></button>
+          <button class="minimize-button" type="button" title="" aria-label="">
+            <svg viewBox="0 0 24 24" aria-hidden="true">
+              <path d="M5 12h14"></path>
+            </svg>
+          </button>
+          <button class="maximize-button" type="button" title="" aria-label="" hidden>
+            <svg viewBox="0 0 24 24" aria-hidden="true">
+              <path d="M5 9l4 4-4 4M19 9l-4 4 4 4"></path>
+            </svg>
+          </button>
           <button class="close-button" type="button" title="" aria-label="">
             <svg viewBox="0 0 24 24" aria-hidden="true">
               <path d="M18 6 6 18M6 6l12 12"></path>
@@ -317,6 +327,9 @@
   const glassArea = root.querySelector("[data-glass-area]");
   const translateButton = root.querySelector(".translate-button");
   const clearButton = root.querySelector(".clear-button");
+  const minimizeButton = root.querySelector(".minimize-button");
+  const maximizeButton = root.querySelector(".maximize-button");
+  let preMinimizeHeight = null;
   const closeButton = root.querySelector(".close-button");
   const settingsButton = root.querySelector(".settings-button");
   const saveSettingsButton = root.querySelector(".save-settings-button");
@@ -416,6 +429,22 @@
       console.debug("Glass Translate pointer release skipped", error);
     }
   }
+
+  minimizeButton.addEventListener("click", () => {
+    preMinimizeHeight = glassWindow.offsetHeight;
+    glassWindow.classList.add("is-minimized");
+    minimizeButton.hidden = true;
+    maximizeButton.hidden = false;
+  });
+
+  maximizeButton.addEventListener("click", () => {
+    glassWindow.classList.remove("is-minimized");
+    if (preMinimizeHeight) {
+      glassWindow.style.height = `${preMinimizeHeight}px`;
+    }
+    minimizeButton.hidden = false;
+    maximizeButton.hidden = true;
+  });
 
   closeButton.addEventListener("click", () => {
     root.remove();
@@ -1271,6 +1300,8 @@
     translateButton.setAttribute("aria-label", copy.translate);
     closeButton.title = copy.close;
     closeButton.setAttribute("aria-label", copy.close);
+    if (minimizeButton) { minimizeButton.title = copy.minimize || ""; minimizeButton.setAttribute("aria-label", copy.minimize || ""); }
+    if (maximizeButton) { maximizeButton.title = copy.maximize || ""; maximizeButton.setAttribute("aria-label", copy.maximize || ""); }
   }
 
   function activeText() {
