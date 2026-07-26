@@ -405,7 +405,11 @@
     } catch (error) {
       if (error.name === "AbortError") {
         streamAbortController = null;
-        status.textContent = activeText().stop;
+        resetStatusSteps();
+        translationLayer.innerHTML = "";
+        translationLayer.classList.remove("is-flow");
+        glassArea.classList.remove("has-translation");
+        status.textContent = "";
         setBusy(false);
         return;
       }
@@ -419,9 +423,16 @@
   });
 
   clearButton.addEventListener("click", () => {
-    // If translation is in progress, abort it
+    // If translation is in progress, abort and reset everything
     if (streamAbortController) {
       streamAbortController.abort();
+      streamAbortController = null;
+      resetStatusSteps();
+      translationLayer.innerHTML = "";
+      translationLayer.classList.remove("is-flow");
+      glassArea.classList.remove("has-translation");
+      status.textContent = "";
+      setBusy(false);
       return;
     }
     // Normal clear
