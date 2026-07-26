@@ -500,6 +500,15 @@
   }
 }
 
+/* Window controls (minimize + close) */
+#glass-translate-root .window-controls {
+  display: inline-flex;
+  align-items: center;
+  gap: 1px;
+  margin-left: 3px;
+  flex-shrink: 0;
+}
+
 #glass-translate-root .capture-mode-inline {
   width: 105px;
   flex-shrink: 0;

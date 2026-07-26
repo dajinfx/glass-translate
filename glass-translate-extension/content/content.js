@@ -253,6 +253,7 @@
           </select>
           <button class="translate-button" type="button" title="" aria-label="" data-i18n="translate"></button>
           <button class="clear-button" type="button" data-i18n="clear"></button>
+          <span class="window-controls">
           <button class="minimize-button" type="button" title="" aria-label="">
             <svg viewBox="0 0 24 24" aria-hidden="true">
               <path d="M5 12h14"></path>
@@ -263,6 +264,7 @@
               <path d="M18 6 6 18M6 6l12 12"></path>
             </svg>
           </button>
+          </span>
           <div class="toolbar-drag-space" aria-hidden="true"></div>
         </div>
 
