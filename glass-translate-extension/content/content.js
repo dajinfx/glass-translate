@@ -260,7 +260,7 @@
           </button>
           <button class="maximize-button" type="button" title="" aria-label="" hidden>
             <svg viewBox="0 0 24 24" aria-hidden="true">
-              <path d="M5 9l4 4-4 4M19 9l-4 4 4 4"></path>
+              <rect x="5" y="5" width="14" height="14" rx="2" fill="none" stroke="currentColor" stroke-width="2"></rect>
             </svg>
           </button>
           <button class="close-button" type="button" title="" aria-label="">
