@@ -1237,7 +1237,7 @@
       clearButton.setAttribute("data-i18n", "clear");
       clearButton.classList.remove("is-stop");
     }
-    applyI18n(clearButton);
+    clearButton.textContent = activeText()[clearButton.dataset.i18n] || clearButton.textContent;
   }
 
   async function loadDefaults() {
