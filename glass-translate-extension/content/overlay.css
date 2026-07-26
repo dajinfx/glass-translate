@@ -197,7 +197,7 @@
   display: flex;
   flex-wrap: nowrap;
   align-items: center;
-  gap: 6px;
+  gap: 3px;
 }
 
 #glass-translate-root select {
@@ -500,7 +500,7 @@
 }
 
 #glass-translate-root .capture-mode-inline {
-  width: 85px;
+  width: 105px;
 }
 
 #glass-translate-root .minimize-button {
