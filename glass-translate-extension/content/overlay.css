@@ -20,10 +20,10 @@
   left: 15%;
   top: 15%;
   display: block;
-  width: max-content;
+  width: min(700px, calc(100vw - 32px));
   max-width: calc(100vw - 32px);
   height: min(140px, calc(50vh - 32px));
-  min-width: 580px;
+  min-width: 620px;
   min-height: 40px;
   border: 2px solid rgba(100, 116, 139, 0.52);
   border-radius: 8px;
@@ -271,7 +271,7 @@
 #glass-translate-root .clear-button,
 #glass-translate-root .settings-button,
 #glass-translate-root .save-settings-button {
-  width: 100px;
+  width: 115px;
   height: 28px;
   border-radius: 8px;
   font-size: 12px;
