@@ -318,7 +318,7 @@
     <div class="status" aria-live="polite"></div>
   `;
 
-  document.body.appendChild(root);
+  document.documentElement.appendChild(root);
 
   const glassWindow = root.querySelector(".glass-window");
   const glassArea = root.querySelector("[data-glass-area]");
