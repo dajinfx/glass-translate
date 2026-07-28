@@ -318,15 +318,7 @@
     <div class="status" aria-live="polite"></div>
   `;
 
-  document.body.appendChild(root);
-
-  // Keep toolbar on top even when pages create overlays (e.g. Instagram)
-  const keepOnTop = new MutationObserver(() => {
-    if (document.body.lastChild !== root) {
-      document.body.appendChild(root);
-    }
-  });
-  keepOnTop.observe(document.body, { childList: true, subtree: false });
+  document.documentElement.appendChild(root);
 
   const glassWindow = root.querySelector(".glass-window");
   const glassArea = root.querySelector("[data-glass-area]");
