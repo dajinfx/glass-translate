@@ -830,6 +830,9 @@
     translationLayer.innerHTML = "";
     glassArea.classList.remove("has-translation");
 
+    // Warm up Render.com free tier (cold start takes 5-15s)
+    await fetch(API_HEALTH_URL).catch(() => {});
+
     streamAbortController = new AbortController();
     const response = await fetch(`${TEXT_API_URL}/stream`, {
       method: "POST",
