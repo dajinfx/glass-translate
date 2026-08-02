@@ -34,6 +34,24 @@
   const DEFAULT_CAPTURE_MODE = "ocr";
   let streamAbortController = null;
   const APP_VERSION = getExtensionVersion();
+  const MEANINGFUL_UI_SET = new Set([
+    "reply", "replies", "like", "likes", "dislike", "share", "save",
+    "more", "read more", "show more", "show less",
+    "translated to chinese", "translate to chinese",
+    "\ub2f5\uae00", "\ub2f5", "\uae00", "\uc77c \uc804",
+    "\uc88b\uc544\uc694", "\uacf5\uc720", "\uc800\uc7a5", "\ub354\ubcf4\uae30"
+  ]);
+
+  const SKIPPABLE_TAGS = new Set([
+    "script", "style", "noscript", "textarea", "input", "select",
+    "option", "button", "svg", "path", "iframe", "canvas", "video",
+    "audio", "img", "br", "hr", "link", "meta", "title"
+  ]);
+
+  const MEANINGFUL_TEXT_RE = /^[\d.,\s]+$/;
+  const USERNAME_RE = /^@\S{2,}$/;
+  const TIME_AGO_RE = /^\d+\s*(second|minute|hour|day|week|month|year)s?\s+ago$/i;
+  const UI_FILTER_RE = /^(edited|translated|translate to .+|show more|show less)$/i;
 
   const LANGUAGE_OPTIONS = [
     { key: "en", value: "English", label: "English" },
@@ -976,26 +994,24 @@
 
   function collectTextBlocksFromGlassArea() {
     const glassRect = glassArea.getBoundingClientRect();
+    const searchRect = {
+      left: glassRect.left - 40,
+      top: glassRect.top - 40,
+      right: glassRect.right + 40,
+      bottom: glassRect.bottom + 40
+    };
+
     const walker = document.createTreeWalker(
       document.body,
       NodeFilter.SHOW_TEXT,
       {
         acceptNode(node) {
-          const text = normalizeText(node.nodeValue);
-          if (!text) return NodeFilter.FILTER_REJECT;
+          // Fast path: quick text/content check first
+          const text = node.nodeValue;
+          if (!text || text.trim().length <= 1) return NodeFilter.FILTER_REJECT;
           const parent = node.parentElement;
           if (!parent || root.contains(parent)) return NodeFilter.FILTER_REJECT;
-          if (shouldSkipElement(parent)) {
-            return NodeFilter.FILTER_REJECT;
-          }
-          const style = window.getComputedStyle(parent);
-          if (
-            style.display === "none" ||
-            style.visibility === "hidden" ||
-            Number(style.opacity) === 0
-          ) {
-            return NodeFilter.FILTER_REJECT;
-          }
+          if (shouldSkipElement(parent)) return NodeFilter.FILTER_REJECT;
           return NodeFilter.FILTER_ACCEPT;
         }
       }
@@ -1006,14 +1022,24 @@
     let node = walker.nextNode();
 
     while (node) {
+      const parent = node.parentElement;
+      // Moved getComputedStyle here from acceptNode - only called for accepted nodes
+      const style = window.getComputedStyle(parent);
+      if (
+        style.display === "none" ||
+        style.visibility === "hidden" ||
+        Number(style.opacity) === 0
+      ) {
+        node = walker.nextNode();
+        continue;
+      }
+
       const range = document.createRange();
       range.selectNodeContents(node);
       const rect = range.getBoundingClientRect();
       range.detach();
 
-      if (rect.width > 0 && rect.height > 0 && intersects(rect, glassRect)) {
-        const parent = node.parentElement;
-        const style = window.getComputedStyle(parent);
+      if (rect.width > 0 && rect.height > 0 && intersects(rect, searchRect)) {
         const sourceText = normalizeText(node.nodeValue);
         if (!isMeaningfulText(sourceText)) {
           node = walker.nextNode();
@@ -1487,55 +1513,28 @@
 
   function shouldSkipElement(element) {
     const tagName = element.tagName?.toLowerCase();
-    if (["script", "style", "noscript", "textarea", "input", "select", "option", "button", "svg", "path"].includes(tagName)) {
-      return true;
+    if (SKIPPABLE_TAGS.has(tagName)) return true;
+    if (element.hasAttribute("aria-hidden") && element.getAttribute("aria-hidden") === "true") return true;
+    // Only walk up to 6 ancestors for structural skip (nav/header/footer)
+    let p = element;
+    for (let i = 0; i < 6 && p; i++) {
+      const t = p.tagName?.toLowerCase();
+      if (t === "nav" || t === "header" || t === "footer") return true;
+      if (p.hasAttribute?.("role") && p.getAttribute("role") === "button") return true;
+      p = p.parentElement;
     }
-
-    if (element.closest("button,[role='button'],[aria-hidden='true'],nav,header,footer")) {
-      return true;
-    }
-
-    const ariaLabel = normalizeText(element.getAttribute("aria-label"));
-    if (ariaLabel && !isMeaningfulText(ariaLabel)) return true;
-
     return false;
   }
 
   function isMeaningfulText(text) {
     const normalized = normalizeText(text);
     if (!normalized) return false;
-    if (/^[\d.,\s]+$/.test(normalized)) return false;
-    if (/^@\S{2,}$/.test(normalized)) return false;
-    if (/^\d+\s*(second|minute|hour|day|week|month|year)s?\s+ago$/i.test(normalized)) return false;
-    if (/^(edited|translated|translate to .+|show more|show less)$/i.test(normalized)) return false;
     if (normalized.length <= 1) return false;
-
-    const lower = normalized.toLowerCase();
-    const uiTexts = new Set([
-      "reply",
-      "replies",
-      "like",
-      "likes",
-      "dislike",
-      "share",
-      "save",
-      "more",
-      "read more",
-      "show more",
-      "show less",
-      "translated to chinese",
-      "translate to chinese",
-      "\ub2f5\uae00",
-      "\ub2f5",
-      "\uae00",
-      "\uc77c \uc804",
-      "\uc88b\uc544\uc694",
-      "\uacf5\uc720",
-      "\uc800\uc7a5",
-      "\ub354\ubcf4\uae30"
-    ]);
-
-    return !uiTexts.has(lower);
+    if (MEANINGFUL_TEXT_RE.test(normalized)) return false;
+    if (USERNAME_RE.test(normalized)) return false;
+    if (TIME_AGO_RE.test(normalized)) return false;
+    if (UI_FILTER_RE.test(normalized)) return false;
+    return !MEANINGFUL_UI_SET.has(normalized.toLowerCase());
   }
 
   function intersects(a, b) {
