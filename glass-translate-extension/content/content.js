@@ -830,10 +830,16 @@
     translationLayer.innerHTML = "";
     glassArea.classList.remove("has-translation");
 
-    // Warm up Render.com free tier (cold start takes 5-15s)
-    await fetch(API_HEALTH_URL).catch(() => {});
+    // Warm up Render.com with 10s timeout (cold start can take 90s without timeout)
+    const warmup = Promise.race([
+      fetch(API_HEALTH_URL),
+      new Promise((_, reject) => setTimeout(() => reject(new Error("warmup timeout")), 10000))
+    ]).catch(() => {});
+    await warmup;
 
     streamAbortController = new AbortController();
+    const TIMEOUT_MS = 45000;
+    const timeoutId = setTimeout(() => streamAbortController.abort(), TIMEOUT_MS);
     const response = await fetch(`${TEXT_API_URL}/stream`, {
       method: "POST",
       headers: {
@@ -842,6 +848,7 @@
       body: JSON.stringify(payload),
       signal: streamAbortController.signal
     });
+    clearTimeout(timeoutId);
 
     if (!response.ok) {
       const data = await response.json().catch(() => null);
