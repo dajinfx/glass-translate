@@ -38,8 +38,21 @@
     "reply", "replies", "like", "likes", "dislike", "share", "save",
     "more", "read more", "show more", "show less",
     "translated to chinese", "translate to chinese",
-    "\ub2f5\uae00", "\ub2f5", "\uae00", "\uc77c \uc804",
-    "\uc88b\uc544\uc694", "\uacf5\uc720", "\uc800\uc7a5", "\ub354\ubcf4\uae30"
+    "comment", "comments", "add a comment",
+    "subscribe", "subscribed", "join", "joined",
+    "sort by", "top comments", "newest first",
+    "\uB2F5\uAE00", "\uB2F5\uAE00 \uB2EC\uAE30", "\uB2F5\uAE00 \uC4F0\uAE30",
+    "\uB313\uAE00", "\uB313\uAE00 \uC4F0\uAE30", "\uB313\uAE00 \uB2EC\uAE30",
+    "\uD68C\uC2E0", "\uC694\uC57D", "\uAD6C\uB3C5", "\uAD6C\uB3C5\uC911", "\uAD6C\uB3C5\uD568",
+    "\uCD94\uCC9C", "\uBE44\uCD94\uCC9C", "\uC2E0\uACE0", "\uACF5\uC720",
+    "\uD3B8\uC9D1", "\uC0AD\uC81C", "\uBCF4\uACE0", "\uB2F5\uBC1C",
+    "\uBC88\uC5ED", "\uBC88\uC5ED\uBCF4\uAE30", "\uC6D0\uBB38 \uD45C\uC2DC",
+    "\uC88B\uC544\uC694", "\uC800\uC7A5", "\uB354\uBCF4\uAE30",
+    "\uC54C\uB9BC", "\uCC38\uC5EC", "\uD37C\uB728\uAE30",
+    "\u56DE\u590D", "\u5173\u95ED", "\u4E3E\u62A5", "\u7F16\u8F91",
+    "\u7FFB\u8BD1", "\u67E5\u770B\u539F\u6587", "\u8BA2\u9605",
+    "\u8FD4\u4FE1", "\u3059\u3079\u3066\u306E\u8FD4\u4FE1",
+    "\u8AAD\u307F\u8FBC\u307F", "\u8FD4\u4FE1\u3059\u308B"
   ]);
 
   const SKIPPABLE_TAGS = new Set([
@@ -50,7 +63,12 @@
 
   const MEANINGFUL_TEXT_RE = /^[\d.,\s]+$/;
   const USERNAME_RE = /^@\S{2,}$/;
-  const TIME_AGO_RE = /^\d+\s*(second|minute|hour|day|week|month|year)s?\s+ago$/i;
+  const TIME_AGO_EN = /^\d+\s*(second|minute|hour|day|week|month|year)s?\s+ago$/i;
+  const TIME_AGO_KO = /^(\d+\s*(\uCD08|\uBD84|\uC2DC\uAC04|\uC77C|\uC8FC|\uAC1C\uC6D4|\uB144)\s*\uC804|\uBC29\uAE08\s*\uC804|\uC218\uC815\uB428)$/;
+  const TIME_AGO_ZH = /^(\d+\s*(\u79D2|\u5206\u949F|\u5C0F\u65F6|\u5929|\u5468|\u4E2A?\u6708|\u5E74|\u65E5)\u524D|\u521A\u521A)$/;
+  const TIME_AGO_JA = /^(\d+\s*(\u79D2|\u5206|\u6642\u9593|\u65E5|\u9031\u9593|\u30F6?\u6708|\u5E74)\u524D|\u305F\u3063\u305F\u4ECA)$/;
+  const PLATFORM_UI_RE = /^(\uB2F5\uAE00|\u3137\u3137\u3137|\uC2E0\uACE0|\uACF5\uC720|\uD3B8\uC9D1|\uC0AD\uC81C|\uBCF4\uACE0|\uD68C\uC2E0|\uC694\uC57D|\uCD94\uCC9C|\uBE44\uCD94\uCC9C|\uAD6C\uB3C5|\uAD6C\uB3C5\uC911|\uAD6C\uB3C5\uD568|\uCC38\uC5EC|\uC54C\uB9BC|\uB2F5\uBC1C|\uD37C\uB728\uAE30|\uBC88\uC5ED|\uBC88\uC5ED\uBCF4\uAE30)$/i;
+  const COUNT_UI_RE = /^(\d+\s*(\uAC1C|\uBA85|\uAC74|\uD68C|\uC870|\u4EF6|\u6761|\u500B|\u4E2A)?\s*(\uB313\uAE00|\uB2F5\uAE00|\uC758 \uB313\uAE00|\uC758 \uB2F5\uAE00|reply|replies|comment|comments)\s*$|^\uB313\uAE00\s*\d+|^\uB2F5\uAE00\s*\d+|^\u56DE\u590D\s*\d+|^reply\s*\d+)$/i;
   const UI_FILTER_RE = /^(edited|translated|translate to .+|show more|show less)$/i;
 
   const LANGUAGE_OPTIONS = [
@@ -1534,8 +1552,12 @@
     if (normalized.length <= 1) return false;
     if (MEANINGFUL_TEXT_RE.test(normalized)) return false;
     if (USERNAME_RE.test(normalized)) return false;
-    if (TIME_AGO_RE.test(normalized)) return false;
+    if (TIME_AGO_EN.test(normalized)) return false;
+    if (TIME_AGO_KO.test(normalized)) return false;
+    if (TIME_AGO_ZH.test(normalized)) return false;
+    if (TIME_AGO_JA.test(normalized)) return false;
     if (UI_FILTER_RE.test(normalized)) return false;
+    if (COUNT_UI_RE.test(normalized)) return false;
     return !MEANINGFUL_UI_SET.has(normalized.toLowerCase());
   }
 
