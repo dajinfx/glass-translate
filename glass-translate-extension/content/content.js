@@ -832,76 +832,81 @@
 
     streamAbortController = new AbortController();
 
-    // True chunked: split blocks into small groups, send one at a time
-    // First group is a single block (cold-start friendly), rest are 2 blocks
-    // First results appear in 2-5s even during Render cold start
-    const FIRST_GROUP_SIZE = 1;
-    const GROUP_SIZE = 2;
-    const groups = [];
-    const firstGroup = payload.blocks.slice(0, FIRST_GROUP_SIZE);
-    if (firstGroup.length) groups.push(firstGroup);
-    for (let i = FIRST_GROUP_SIZE; i < payload.blocks.length; i += GROUP_SIZE) {
-      groups.push(payload.blocks.slice(i, i + GROUP_SIZE));
+    streamAbortController = new AbortController();
+    const response = await fetch(`${TEXT_API_URL}/stream`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify(payload),
+      signal: streamAbortController.signal
+    });
+
+    if (!response.ok) {
+      const data = await response.json().catch(() => null);
+      throw new Error(data?.message || `${activeText().requestFailed}: ${response.status}`);
     }
 
-    let renderedCount = 0;
-    const totalBlocks = payload.blocks.length;
+    const reader = response.body.getReader();
+    const decoder = new TextDecoder();
+    let buffer = "";
+    let receivedCount = 0;
 
-    for (let gi = 0; gi < groups.length; gi++) {
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
       if (streamAbortController?.signal.aborted) break;
 
-      const groupPayload = {
-        blocks: groups[gi],
-        targetLanguage: payload.targetLanguage,
-        model: payload.model,
-        viewport: payload.viewport
-      };
+      buffer += decoder.decode(value, { stream: true });
 
-      const TIMEOUT_MS = gi === 0 ? 60000 : 20000;
-      const ctrl = new AbortController();
-      let timedOut = false;
-      const timeoutId = setTimeout(() => { timedOut = true; ctrl.abort(); }, TIMEOUT_MS);
+      // Parse SSE events from buffer
+      const events = buffer.split("\n\n");
+      buffer = events.pop() || ""; // Keep incomplete event in buffer
 
-      try {
-        const response = await fetch(TEXT_API_URL, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(groupPayload),
-          signal: ctrl.signal
-        });
-        clearTimeout(timeoutId);
+      for (const eventBlock of events) {
+        const lines = eventBlock.split("\n");
+        let eventType = "";
+        let dataStr = "";
 
-        if (!response.ok) {
-          const errData = await response.json().catch(() => null);
-          throw new Error(errData?.message || `${activeText().requestFailed}: ${response.status}`);
+        for (const line of lines) {
+          if (line.startsWith("event: ")) {
+            eventType = line.slice(7).trim();
+          } else if (line.startsWith("data: ")) {
+            dataStr = line.slice(6).trim();
+          }
         }
 
-        const data = await response.json();
-        if (Array.isArray(data?.blocks)) {
-          for (const block of data.blocks) {
-            if (streamAbortController?.signal.aborted) break;
+        if (!dataStr) continue;
+
+        try {
+          const parsed = JSON.parse(dataStr);
+
+          if (eventType === "start") {
+            showStatusStep("stepSending", "streamStarted", { count: parsed.count });
+          } else if (eventType === "block") {
+            receivedCount++;
+            const block = parsed.block;
             if (block && block.id && block.translatedText) {
               renderTranslationBlock(block, captureModeInput.value);
               glassArea.classList.add("has-translation");
-              renderedCount++;
               showStatusStep("stepRendering", "streamProgress", {
-                current: renderedCount,
-                total: totalBlocks
+                current: receivedCount,
+                total: parsed.totalBlocks
               });
             }
+          } else if (eventType === "complete") {
+            showStatusStep("stepComplete", "complete");
+            status.textContent = receivedCount > 0 ? "" : activeText().noText;
+          } else if (eventType === "error") {
+            throw new Error(parsed.message || activeText().translateFailed);
+          }
+        } catch (e) {
+          if (e.message !== activeText().translateFailed) {
+            console.warn("SSE parse error:", e);
           }
         }
-      } catch (e) {
-        clearTimeout(timeoutId);
-        if (gi === 0) {
-          if (timedOut) throw new Error(activeText().requestFailed + ": timeout");
-          throw e;
-        }
-        if (!timedOut) console.warn(`Chunk ${gi} failed:`, e.message);
       }
     }
-
-    status.textContent = renderedCount > 0 ? "" : activeText().noText;
   }
 
   async function requestOcrTranslationStream(payload) {
