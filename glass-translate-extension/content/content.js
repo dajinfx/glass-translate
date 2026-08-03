@@ -901,6 +901,7 @@
     }
 
     status.textContent = renderedCount > 0 ? "" : activeText().noText;
+  }
 
   async function requestOcrTranslationStream(payload) {
     // Clear translation layer BEFORE fetch
