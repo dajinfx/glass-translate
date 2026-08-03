@@ -30,7 +30,7 @@
   const DEFAULT_MODE_STORAGE_KEY = "glassTranslateDefaultMode";
   const CAPTURE_MODE_STORAGE_KEY = "glassTranslateCaptureMode";
   const DEFAULT_LANGUAGE = "English";
-  const DEFAULT_MODEL = "deepseek";
+  const DEFAULT_MODEL = "gpt";
   const DEFAULT_CAPTURE_MODE = "ocr";
   let streamAbortController = null;
   const APP_VERSION = getExtensionVersion();
@@ -1373,7 +1373,7 @@
       applyToolLanguage(defaultLanguage);
     }
 
-    applyDefaultModel(defaultModel || DEFAULT_MODEL);
+    applyDefaultModel("gpt");
     applyCaptureMode(captureMode || DEFAULT_CAPTURE_MODE);
   }
 
