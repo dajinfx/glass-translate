@@ -997,10 +997,10 @@
   function collectTextBlocksFromGlassArea() {
     const glassRect = glassArea.getBoundingClientRect();
     const searchRect = {
-      left: glassRect.left - 40,
-      top: glassRect.top - 40,
-      right: glassRect.right + 40,
-      bottom: glassRect.bottom + 40
+      left: glassRect.left,
+      top: glassRect.top,
+      right: glassRect.right,
+      bottom: glassRect.bottom
     };
 
     const walker = document.createTreeWalker(
