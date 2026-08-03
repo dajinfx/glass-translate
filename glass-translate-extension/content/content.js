@@ -830,20 +830,17 @@
     translationLayer.innerHTML = "";
     glassArea.classList.remove("has-translation");
 
-    // Warm up Render.com with 10s timeout
-    const warmup = Promise.race([
-      fetch(API_HEALTH_URL),
-      new Promise((_, reject) => setTimeout(() => reject(new Error("warmup timeout")), 10000))
-    ]).catch(() => {});
-    await warmup;
-
     streamAbortController = new AbortController();
 
     // True chunked: split blocks into small groups, send one at a time
-    // Each group translates independently, first results appear in 1-3s
+    // First group is a single block (cold-start friendly), rest are 2 blocks
+    // First results appear in 2-5s even during Render cold start
+    const FIRST_GROUP_SIZE = 1;
     const GROUP_SIZE = 2;
     const groups = [];
-    for (let i = 0; i < payload.blocks.length; i += GROUP_SIZE) {
+    const firstGroup = payload.blocks.slice(0, FIRST_GROUP_SIZE);
+    if (firstGroup.length) groups.push(firstGroup);
+    for (let i = FIRST_GROUP_SIZE; i < payload.blocks.length; i += GROUP_SIZE) {
       groups.push(payload.blocks.slice(i, i + GROUP_SIZE));
     }
 
@@ -860,7 +857,7 @@
         viewport: payload.viewport
       };
 
-      const TIMEOUT_MS = 20000;
+      const TIMEOUT_MS = gi === 0 ? 30000 : 15000;
       const ctrl = new AbortController();
       const timeoutId = setTimeout(() => ctrl.abort(), TIMEOUT_MS);
 
