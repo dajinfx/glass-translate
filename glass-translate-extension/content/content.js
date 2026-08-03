@@ -857,9 +857,10 @@
         viewport: payload.viewport
       };
 
-      const TIMEOUT_MS = gi === 0 ? 30000 : 15000;
+      const TIMEOUT_MS = gi === 0 ? 60000 : 20000;
       const ctrl = new AbortController();
-      const timeoutId = setTimeout(() => ctrl.abort(), TIMEOUT_MS);
+      let timedOut = false;
+      const timeoutId = setTimeout(() => { timedOut = true; ctrl.abort(); }, TIMEOUT_MS);
 
       try {
         const response = await fetch(TEXT_API_URL, {
@@ -892,8 +893,11 @@
         }
       } catch (e) {
         clearTimeout(timeoutId);
-        if (gi === 0) throw e; // Fail on first group, skip later groups
-        console.warn(`Chunk ${gi} failed, continuing:`, e.message);
+        if (gi === 0) {
+          if (timedOut) throw new Error(activeText().requestFailed + ": timeout");
+          throw e;
+        }
+        if (!timedOut) console.warn(`Chunk ${gi} failed:`, e.message);
       }
     }
 
