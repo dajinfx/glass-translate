@@ -10,6 +10,7 @@
   const API_URL = "https://glass-translate-api.onrender.com/api/translate-image";
   const TEXT_API_URL = "https://glass-translate-api.onrender.com/api/translate-text";
   const API_HEALTH_URL = "https://glass-translate-api.onrender.com/health";
+  const FEEDBACK_API_URL = "https://glass-translate-api.onrender.com/api/feedback";
   const MIN_WIDTH = 300;
   const MIN_HEIGHT = 40;
   const EDGE_MARGIN = 8;
@@ -99,6 +100,18 @@
       canvasFailed: "\u65e0\u6cd5\u521b\u5efa\u622a\u56fe\u753b\u5e03",
       imageLoadFailed: "\u622a\u56fe\u56fe\u7247\u52a0\u8f7d\u5931\u8d25",
       requestFailed: "\u670d\u52a1\u8bf7\u6c42\u5931\u8d25",
+      feedback: "\u53cd\u9988",
+      feedbackEmail: "\u90ae\u7bb1",
+      feedbackEmailPlaceholder: "\u8bf7\u8f93\u5165\u60a8\u7684\u90ae\u7bb1",
+      feedbackMessage: "\u53cd\u9988\u5185\u5bb9",
+      feedbackMessagePlaceholder: "\u8bf7\u8f93\u5165\u60a8\u7684\u53cd\u9988\u5185\u5bb9",
+      feedbackSend: "\u786e\u8ba4\u53d1\u9001",
+      feedbackSending: "\u53d1\u9001\u4e2d...",
+      feedbackSent: "\u53cd\u9988\u5df2\u53d1\u9001\uff0c\u611f\u8c22\u60a8\uff01",
+      feedbackFailed: "\u53d1\u9001\u5931\u8d25\uff0c\u8bf7\u7a0d\u540e\u91cd\u8bd5",
+      emailRequired: "\u8bf7\u586b\u5199\u60a8\u7684\u90ae\u7bb1",
+      messageRequired: "\u8bf7\u586b\u5199\u53cd\u9988\u5185\u5bb9",
+      cancel: "\u53d6\u6d88",
       close: "\u5173\u95ed", stop: "\u505c\u6b62", minimize: "\u6700\u5c0f\u5316", maximize: "\u6700\u5927\u5316"
     },
     en: {
@@ -138,6 +151,18 @@
       canvasFailed: "Could not create screenshot canvas",
       imageLoadFailed: "Screenshot image failed to load",
       requestFailed: "Service request failed",
+      feedback: "Feedback",
+      feedbackEmail: "Email",
+      feedbackEmailPlaceholder: "Enter your email",
+      feedbackMessage: "Message",
+      feedbackMessagePlaceholder: "Enter your feedback",
+      feedbackSend: "Send",
+      feedbackSending: "Sending...",
+      feedbackSent: "Feedback sent. Thank you!",
+      feedbackFailed: "Failed to send. Please try again later.",
+      emailRequired: "Please enter your email",
+      messageRequired: "Please enter your feedback",
+      cancel: "Cancel",
       close: "Close", stop: "Stop", minimize: "Minimize", maximize: "Maximize"
     },
     ja: {
@@ -379,6 +404,7 @@
               ${buildCaptureModeOptions(DEFAULT_CAPTURE_MODE)}
             </select>
           </div>
+          <button class="feedback-button" type="button" data-i18n="feedback"></button>
           <button class="save-settings-button" type="button" data-i18n="save"></button>
         </div>
       </div>
@@ -399,6 +425,26 @@
       <div class="resize-handle resize-sw" data-resize="sw"></div>
     </div>
 
+    <div class="feedback-modal" data-feedback-modal hidden>
+      <div class="feedback-modal-backdrop"></div>
+      <div class="feedback-modal-card">
+        <div class="feedback-modal-header" data-i18n="feedback"></div>
+        <div class="feedback-field">
+          <label data-i18n="feedbackEmail"></label>
+          <input class="feedback-email" type="email" data-i18n-placeholder="feedbackEmailPlaceholder" />
+        </div>
+        <div class="feedback-field">
+          <label data-i18n="feedbackMessage"></label>
+          <textarea class="feedback-message" rows="5" data-i18n-placeholder="feedbackMessagePlaceholder"></textarea>
+        </div>
+        <div class="feedback-error" data-feedback-error hidden></div>
+        <div class="feedback-modal-actions">
+          <button class="feedback-cancel-button" type="button" data-i18n="cancel"></button>
+          <button class="feedback-send-button" type="button" data-i18n="feedbackSend"></button>
+        </div>
+      </div>
+    </div>
+
     <div class="status" aria-live="polite"></div>
   `;
 
@@ -413,6 +459,13 @@
   const closeButton = root.querySelector(".close-button");
   const settingsButton = root.querySelector(".settings-button");
   const saveSettingsButton = root.querySelector(".save-settings-button");
+  const feedbackButton = root.querySelector(".feedback-button");
+  const feedbackModal = root.querySelector("[data-feedback-modal]");
+  const feedbackEmailInput = root.querySelector(".feedback-email");
+  const feedbackMessageInput = root.querySelector(".feedback-message");
+  const feedbackError = root.querySelector("[data-feedback-error]");
+  const feedbackCancelButton = root.querySelector(".feedback-cancel-button");
+  const feedbackSendButton = root.querySelector(".feedback-send-button");
   const settingsPanel = root.querySelector("[data-settings-panel]");
   const translationLayer = root.querySelector("[data-translation-layer]");
   const status = root.querySelector(".status");
@@ -580,6 +633,45 @@
     applyToolLanguage(defaultLanguage);
     settingsPanel.hidden = true;
     status.textContent = activeText().saved;
+  });
+
+  feedbackButton.addEventListener("click", () => {
+    openFeedbackModal();
+  });
+
+  feedbackCancelButton.addEventListener("click", () => {
+    closeFeedbackModal();
+  });
+
+  feedbackModal.querySelector(".feedback-modal-backdrop").addEventListener("click", () => {
+    closeFeedbackModal();
+  });
+
+  feedbackSendButton.addEventListener("click", async () => {
+    const email = feedbackEmailInput.value.trim();
+    const message = feedbackMessageInput.value.trim();
+
+    if (!email) {
+      showFeedbackError(activeText().emailRequired);
+      return;
+    }
+    if (!message) {
+      showFeedbackError(activeText().messageRequired);
+      return;
+    }
+
+    hideFeedbackError();
+    setFeedbackBusy(true);
+
+    try {
+      await sendFeedback(email, message);
+      setFeedbackBusy(false);
+      closeFeedbackModal();
+      status.textContent = activeText().feedbackSent;
+    } catch (error) {
+      setFeedbackBusy(false);
+      showFeedbackError(error?.message || activeText().feedbackFailed);
+    }
   });
 
   translateButton.addEventListener("click", async () => {
@@ -1384,6 +1476,10 @@
       element.textContent = copy[element.dataset.i18n] || element.textContent || "";
     });
 
+    root.querySelectorAll("[data-i18n-placeholder]").forEach((element) => {
+      element.placeholder = copy[element.dataset.i18nPlaceholder] || "";
+    });
+
     translateButton.title = copy.translate;
     translateButton.setAttribute("aria-label", copy.translate);
     closeButton.title = copy.close;
@@ -1503,6 +1599,60 @@
   function normalizeAlign(align) {
     if (["left", "center", "right", "justify"].includes(align)) return align;
     return "left";
+  }
+
+  function openFeedbackModal() {
+    feedbackModal.hidden = false;
+    feedbackModal.style.display = "flex";
+    feedbackEmailInput.value = "";
+    feedbackMessageInput.value = "";
+    hideFeedbackError();
+    setFeedbackBusy(false);
+    feedbackEmailInput.focus();
+  }
+
+  function closeFeedbackModal() {
+    feedbackModal.hidden = true;
+    feedbackModal.style.display = "none";
+    setFeedbackBusy(false);
+  }
+
+  function showFeedbackError(message) {
+    feedbackError.textContent = message;
+    feedbackError.hidden = false;
+  }
+
+  function hideFeedbackError() {
+    feedbackError.hidden = true;
+    feedbackError.textContent = "";
+  }
+
+  function setFeedbackBusy(busy) {
+    feedbackSendButton.disabled = busy;
+    if (busy) {
+      feedbackSendButton.dataset.originalText = feedbackSendButton.textContent;
+      feedbackSendButton.textContent = activeText().feedbackSending;
+    } else if (feedbackSendButton.dataset.originalText) {
+      feedbackSendButton.textContent = feedbackSendButton.dataset.originalText;
+      delete feedbackSendButton.dataset.originalText;
+    }
+  }
+
+  async function sendFeedback(email, message) {
+    const response = await fetch(FEEDBACK_API_URL, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify({ email, message })
+    });
+
+    const data = await response.json().catch(() => null);
+    if (!response.ok) {
+      throw new Error(data?.message || activeText().feedbackFailed);
+    }
+
+    return data;
   }
 
   function normalizeText(text) {

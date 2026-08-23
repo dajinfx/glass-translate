@@ -10,7 +10,8 @@
   const API_URL = "https://glass-translate-api.onrender.com/api/translate-image";
   const TEXT_API_URL = "https://glass-translate-api.onrender.com/api/translate-text";
   const API_HEALTH_URL = "https://glass-translate-api.onrender.com/health";
-  const MIN_WIDTH = 700;
+  const FEEDBACK_API_URL = "https://glass-translate-api.onrender.com/api/feedback";
+  const MIN_WIDTH = 300;
   const MIN_HEIGHT = 40;
   const EDGE_MARGIN = 8;
   const RIGHT_EDGE_MARGIN = 0;
@@ -30,10 +31,28 @@
   const DEFAULT_MODE_STORAGE_KEY = "glassTranslateDefaultMode";
   const CAPTURE_MODE_STORAGE_KEY = "glassTranslateCaptureMode";
   const DEFAULT_LANGUAGE = "English";
-  const DEFAULT_MODEL = "deepseek";
+  const DEFAULT_MODEL = "gpt";
   const DEFAULT_CAPTURE_MODE = "ocr";
   let streamAbortController = null;
   const APP_VERSION = getExtensionVersion();
+  const MEANINGFUL_UI_SET = new Set([
+    "reply", "replies", "like", "likes", "dislike", "share", "save",
+    "more", "read more", "show more", "show less",
+    "translated to chinese", "translate to chinese",
+    "\ub2f5\uae00", "\ub2f5", "\uae00", "\uc77c \uc804",
+    "\uc88b\uc544\uc694", "\uacf5\uc720", "\uc800\uc7a5", "\ub354\ubcf4\uae30"
+  ]);
+
+  const SKIPPABLE_TAGS = new Set([
+    "script", "style", "noscript", "textarea", "input", "select",
+    "option", "button", "svg", "path", "iframe", "canvas", "video",
+    "audio", "img", "br", "hr", "link", "meta", "title"
+  ]);
+
+  const MEANINGFUL_TEXT_RE = /^[\d.,\s]+$/;
+  const USERNAME_RE = /^@\S{2,}$/;
+  const TIME_AGO_RE = /^\d+\s*(second|minute|hour|day|week|month|year)s?\s+ago$/i;
+  const UI_FILTER_RE = /^(edited|translated|translate to .+|show more|show less)$/i;
 
   const LANGUAGE_OPTIONS = [
     { key: "en", value: "English", label: "English" },
@@ -42,7 +61,10 @@
     { key: "ko", value: "\ud55c\uad6d\uc5b4", label: "\ud55c\uad6d\uc5b4" },
     { key: "fr", value: "Fran\u00e7ais", label: "Fran\u00e7ais" },
     { key: "de", value: "Deutsch", label: "Deutsch" },
-    { key: "es", value: "Espa\u00f1ol", label: "Espa\u00f1ol" }
+    { key: "es", value: "Espa\u00f1ol", label: "Espa\u00f1ol" },
+    { key: "ru", value: "\u0420\u0443\u0441\u0441\u043a\u0438\u0439", label: "\u0420\u0443\u0441\u0441\u043a\u0438\u0439" },
+    { key: "ar", value: "\u0627\u0644\u0639\u0631\u0628\u064a\u0629", label: "\u0627\u0644\u0639\u0631\u0628\u064a\u0629" },
+    { key: "hi", value: "\u0939\u093f\u0928\u094d\u0926\u0940", label: "\u0939\u093f\u0928\u094d\u0926\u0940" }
   ];
 
   const I18N = {
@@ -78,6 +100,18 @@
       canvasFailed: "\u65e0\u6cd5\u521b\u5efa\u622a\u56fe\u753b\u5e03",
       imageLoadFailed: "\u622a\u56fe\u56fe\u7247\u52a0\u8f7d\u5931\u8d25",
       requestFailed: "\u670d\u52a1\u8bf7\u6c42\u5931\u8d25",
+      feedback: "\u53cd\u9988",
+      feedbackEmail: "\u90ae\u7bb1",
+      feedbackEmailPlaceholder: "\u8bf7\u8f93\u5165\u60a8\u7684\u90ae\u7bb1",
+      feedbackMessage: "\u53cd\u9988\u5185\u5bb9",
+      feedbackMessagePlaceholder: "\u8bf7\u8f93\u5165\u60a8\u7684\u53cd\u9988\u5185\u5bb9",
+      feedbackSend: "\u786e\u8ba4\u53d1\u9001",
+      feedbackSending: "\u53d1\u9001\u4e2d...",
+      feedbackSent: "\u53cd\u9988\u5df2\u53d1\u9001\uff0c\u611f\u8c22\u60a8\uff01",
+      feedbackFailed: "\u53d1\u9001\u5931\u8d25\uff0c\u8bf7\u7a0d\u540e\u91cd\u8bd5",
+      emailRequired: "\u8bf7\u586b\u5199\u60a8\u7684\u90ae\u7bb1",
+      messageRequired: "\u8bf7\u586b\u5199\u53cd\u9988\u5185\u5bb9",
+      cancel: "\u53d6\u6d88",
       close: "\u5173\u95ed", stop: "\u505c\u6b62", minimize: "\u6700\u5c0f\u5316", maximize: "\u6700\u5927\u5316"
     },
     en: {
@@ -117,6 +151,18 @@
       canvasFailed: "Could not create screenshot canvas",
       imageLoadFailed: "Screenshot image failed to load",
       requestFailed: "Service request failed",
+      feedback: "Feedback",
+      feedbackEmail: "Email",
+      feedbackEmailPlaceholder: "Enter your email",
+      feedbackMessage: "Message",
+      feedbackMessagePlaceholder: "Enter your feedback",
+      feedbackSend: "Send",
+      feedbackSending: "Sending...",
+      feedbackSent: "Feedback sent. Thank you!",
+      feedbackFailed: "Failed to send. Please try again later.",
+      emailRequired: "Please enter your email",
+      messageRequired: "Please enter your feedback",
+      cancel: "Cancel",
       close: "Close", stop: "Stop", minimize: "Minimize", maximize: "Maximize"
     },
     ja: {
@@ -233,7 +279,70 @@
       imageLoadFailed: "No se pudo cargar la imagen",
       requestFailed: "Error de solicitud",
       close: "Cerrar", stop: "Detener", minimize: "Minimizar", maximize: "Maximizar"
-    }
+    },
+    ru: {
+      language: "\u042f\u0437\u044b\u043a",
+      model: "\u041c\u043e\u0434\u0435\u043b\u044c",
+      translate: "\u041f\u0435\u0440\u0435\u0432\u0435\u0441\u0442\u0438",
+      clear: "\u041e\u0447\u0438\u0441\u0442\u0438\u0442\u044c",
+      settings: "\u041d\u0430\u0441\u0442\u0440\u043e\u0439\u043a\u0438",
+      defaultLanguage: "\u042f\u0437\u044b\u043a \u043f\u043e \u0443\u043c\u043e\u043b\u0447\u0430\u043d\u0438\u044e",
+      defaultModel: "\u041c\u043e\u0434\u0435\u043b\u044c \u043f\u043e \u0443\u043c\u043e\u043b\u0447\u0430\u043d\u0438\u044e",
+      captureMode: "\u0420\u0435\u0436\u0438\u043c \u0437\u0430\u0445\u0432\u0430\u0442\u0430",
+      save: "\u0421\u043e\u0445\u0440\u0430\u043d\u0438\u0442\u044c",
+      saved: "\u0421\u043e\u0445\u0440\u0430\u043d\u0435\u043d\u043e",
+      translating: "\u041f\u0435\u0440\u0435\u0432\u043e\u0434...",
+      translateFailed: "\u041e\u0448\u0438\u0431\u043a\u0430 \u043f\u0435\u0440\u0435\u0432\u043e\u0434\u0430",
+      noText: "\u041f\u0435\u0440\u0435\u0432\u043e\u0434\u0438\u043c\u044b\u0439 \u0442\u0435\u043a\u0441\u0442 \u043d\u0435 \u043d\u0430\u0439\u0434\u0435\u043d",
+      noPageText: "\u0422\u0435\u043a\u0441\u0442 \u043d\u0430 \u0441\u0442\u0440\u0430\u043d\u0438\u0446\u0435 \u043d\u0435 \u043d\u0430\u0439\u0434\u0435\u043d. \u041f\u0435\u0440\u0435\u043a\u043b\u044e\u0447\u0438\u0442\u0435\u0441\u044c \u043d\u0430 OCR \u0432 \u043d\u0430\u0441\u0442\u0440\u043e\u0439\u043a\u0430\u0445.",
+      screenshotFailed: "\u041e\u0448\u0438\u0431\u043a\u0430 \u0441\u043d\u0438\u043c\u043a\u0430 \u044d\u043a\u0440\u0430\u043d\u0430",
+      canvasFailed: "\u041d\u0435 \u0443\u0434\u0430\u043b\u043e\u0441\u044c \u0441\u043e\u0437\u0434\u0430\u0442\u044c \u0445\u043e\u043b\u0441\u0442",
+      imageLoadFailed: "\u041d\u0435 \u0443\u0434\u0430\u043b\u043e\u0441\u044c \u0437\u0430\u0433\u0440\u0443\u0437\u0438\u0442\u044c \u0438\u0437\u043e\u0431\u0440\u0430\u0436\u0435\u043d\u0438\u0435",
+      requestFailed: "\u041e\u0448\u0438\u0431\u043a\u0430 \u0437\u0430\u043f\u0440\u043e\u0441\u0430",
+      close: "\u0417\u0430\u043a\u0440\u044b\u0442\u044c", stop: "\u0421\u0442\u043e\u043f", minimize: "\u0421\u0432\u0435\u0440\u043d\u0443\u0442\u044c", maximize: "\u0420\u0430\u0437\u0432\u0435\u0440\u043d\u0443\u0442\u044c"
+    },
+    ar: {
+      language: "\u0627\u0644\u0644\u063a\u0629",
+      model: "\u0627\u0644\u0646\u0645\u0648\u0630\u062c",
+      translate: "\u062a\u0631\u062c\u0645\u0629",
+      clear: "\u0645\u0633\u062d",
+      settings: "\u0627\u0644\u0625\u0639\u062f\u0627\u062f\u0627\u062a",
+      defaultLanguage: "\u0627\u0644\u0644\u063a\u0629 \u0627\u0644\u0627\u0641\u062a\u0631\u0627\u0636\u064a\u0629",
+      defaultModel: "\u0627\u0644\u0646\u0645\u0648\u0630\u062c \u0627\u0644\u0627\u0641\u062a\u0631\u0627\u0636\u064a",
+      captureMode: "\u0648\u0636\u0639 \u0627\u0644\u0627\u0644\u062a\u0642\u0627\u0637",
+      save: "\u062d\u0641\u0638",
+      saved: "\u062a\u0645 \u0627\u0644\u062d\u0641\u0638",
+      translating: "\u062c\u0627\u0631\u064a \u0627\u0644\u062a\u0631\u062c\u0645\u0629...",
+      translateFailed: "\u0641\u0634\u0644\u062a \u0627\u0644\u062a\u0631\u062c\u0645\u0629",
+      noText: "\u0644\u0645 \u064a\u062a\u0645 \u0627\u0644\u0639\u062b\u0648\u0631 \u0639\u0644\u0649 \u0646\u0635 \u0642\u0627\u0628\u0644 \u0644\u0644\u062a\u0631\u062c\u0645\u0629",
+      noPageText: "\u0644\u0645 \u064a\u062a\u0645 \u0627\u0644\u0639\u062b\u0648\u0631 \u0639\u0644\u0649 \u0646\u0635 \u0641\u064a \u0627\u0644\u0635\u0641\u062d\u0629. \u0627\u0646\u062a\u0642\u0644 \u0625\u0644\u0649 OCR \u0641\u064a \u0627\u0644\u0625\u0639\u062f\u0627\u062f\u0627\u062a.",
+      screenshotFailed: "\u0641\u0634\u0644 \u0627\u0644\u062a\u0642\u0627\u0637 \u0627\u0644\u0634\u0627\u0634\u0629",
+      canvasFailed: "\u062a\u0639\u0630\u0631 \u0625\u0646\u0634\u0627\u0621 \u0644\u0648\u062d\u0629 \u0627\u0644\u0631\u0633\u0645",
+      imageLoadFailed: "\u0641\u0634\u0644 \u062a\u062d\u0645\u064a\u0644 \u0627\u0644\u0635\u0648\u0631\u0629",
+      requestFailed: "\u0641\u0634\u0644 \u0637\u0644\u0628 \u0627\u0644\u062e\u062f\u0645\u0629",
+      close: "\u0625\u063a\u0644\u0627\u0642", stop: "\u0625\u064a\u0642\u0627\u0641", minimize: "\u062a\u0635\u063a\u064a\u0631", maximize: "\u062a\u0643\u0628\u064a\u0631"
+    },
+    hi: {
+      language: "\u092d\u093e\u0937\u093e",
+      model: "\u092e\u0949\u0921\u0932",
+      translate: "\u0905\u0928\u0941\u0935\u093e\u0926",
+      clear: "\u0938\u093e\u092b\u093c \u0915\u0930\u0947\u0902",
+      settings: "\u0938\u0947\u091f\u093f\u0902\u0917\u094d\u0938",
+      defaultLanguage: "\u0921\u093f\u092b\u093c\u0949\u0932\u094d\u091f \u092d\u093e\u0937\u093e",
+      defaultModel: "\u0921\u093f\u092b\u093c\u0949\u0932\u094d\u091f \u092e\u0949\u0921\u0932",
+      captureMode: "\u0915\u0948\u092a\u094d\u091a\u0930 \u092e\u094b\u0921",
+      save: "\u0938\u0939\u0947\u091c\u0947\u0902",
+      saved: "\u0938\u0939\u0947\u091c\u093e \u0917\u092f\u093e",
+      translating: "\u0905\u0928\u0941\u0935\u093e\u0926 \u0939\u094b \u0930\u0939\u093e \u0939\u0948...",
+      translateFailed: "\u0905\u0928\u0941\u0935\u093e\u0926 \u0935\u093f\u092b\u0932",
+      noText: "\u0905\u0928\u0941\u0935\u093e\u0926 \u092f\u094b\u0917\u094d\u092f \u091f\u0947\u0915\u094d\u0938\u094d\u091f \u0928\u0939\u0940\u0902 \u092e\u093f\u0932\u093e",
+      noPageText: "\u092a\u0947\u091c \u091f\u0947\u0915\u094d\u0938\u094d\u091f \u0928\u0939\u0940\u0902 \u092e\u093f\u0932\u093e\u0964 \u0938\u0947\u091f\u093f\u0902\u0917\u094d\u0938 \u092e\u0947\u0902 OCR \u092a\u0930 \u0938\u094d\u0935\u093f\u091a \u0915\u0930\u0947\u0902\u0964",
+      screenshotFailed: "\u0938\u094d\u0915\u094d\u0930\u0940\u0928\u0936\u0949\u091f \u0935\u093f\u092b\u0932",
+      canvasFailed: "\u0915\u0948\u0928\u0935\u093e\u0938 \u0928\u0939\u0940\u0902 \u092c\u0928\u093e \u0938\u0915\u0947",
+      imageLoadFailed: "\u0907\u092e\u0947\u091c \u0932\u094b\u0921 \u0928\u0939\u0940\u0902 \u0939\u094b \u0938\u0915\u0940",
+      requestFailed: "\u0938\u0947\u0935\u093e \u0905\u0928\u0941\u0930\u094b\u0927 \u0935\u093f\u092b\u0932",
+      close: "\u092c\u0902\u0926 \u0915\u0930\u0947\u0902", stop: "\u0930\u094b\u0915\u0947\u0902", minimize: "\u091b\u094b\u091f\u093e \u0915\u0930\u0947\u0902", maximize: "\u092c\u0921\u093c\u093e \u0915\u0930\u0947\u0902"
+    },
   };
 
   let currentLanguage = DEFAULT_LANGUAGE;
@@ -295,6 +404,7 @@
               ${buildCaptureModeOptions(DEFAULT_CAPTURE_MODE)}
             </select>
           </div>
+          <button class="feedback-button" type="button" data-i18n="feedback"></button>
           <button class="save-settings-button" type="button" data-i18n="save"></button>
         </div>
       </div>
@@ -315,6 +425,26 @@
       <div class="resize-handle resize-sw" data-resize="sw"></div>
     </div>
 
+    <div class="feedback-modal" data-feedback-modal hidden>
+      <div class="feedback-modal-backdrop"></div>
+      <div class="feedback-modal-card">
+        <div class="feedback-modal-header" data-i18n="feedback"></div>
+        <div class="feedback-field">
+          <label data-i18n="feedbackEmail"></label>
+          <input class="feedback-email" type="email" data-i18n-placeholder="feedbackEmailPlaceholder" />
+        </div>
+        <div class="feedback-field">
+          <label data-i18n="feedbackMessage"></label>
+          <textarea class="feedback-message" rows="5" data-i18n-placeholder="feedbackMessagePlaceholder"></textarea>
+        </div>
+        <div class="feedback-error" data-feedback-error hidden></div>
+        <div class="feedback-modal-actions">
+          <button class="feedback-cancel-button" type="button" data-i18n="cancel"></button>
+          <button class="feedback-send-button" type="button" data-i18n="feedbackSend"></button>
+        </div>
+      </div>
+    </div>
+
     <div class="status" aria-live="polite"></div>
   `;
 
@@ -329,6 +459,13 @@
   const closeButton = root.querySelector(".close-button");
   const settingsButton = root.querySelector(".settings-button");
   const saveSettingsButton = root.querySelector(".save-settings-button");
+  const feedbackButton = root.querySelector(".feedback-button");
+  const feedbackModal = root.querySelector("[data-feedback-modal]");
+  const feedbackEmailInput = root.querySelector(".feedback-email");
+  const feedbackMessageInput = root.querySelector(".feedback-message");
+  const feedbackError = root.querySelector("[data-feedback-error]");
+  const feedbackCancelButton = root.querySelector(".feedback-cancel-button");
+  const feedbackSendButton = root.querySelector(".feedback-send-button");
   const settingsPanel = root.querySelector("[data-settings-panel]");
   const translationLayer = root.querySelector("[data-translation-layer]");
   const status = root.querySelector(".status");
@@ -496,6 +633,45 @@
     applyToolLanguage(defaultLanguage);
     settingsPanel.hidden = true;
     status.textContent = activeText().saved;
+  });
+
+  feedbackButton.addEventListener("click", () => {
+    openFeedbackModal();
+  });
+
+  feedbackCancelButton.addEventListener("click", () => {
+    closeFeedbackModal();
+  });
+
+  feedbackModal.querySelector(".feedback-modal-backdrop").addEventListener("click", () => {
+    closeFeedbackModal();
+  });
+
+  feedbackSendButton.addEventListener("click", async () => {
+    const email = feedbackEmailInput.value.trim();
+    const message = feedbackMessageInput.value.trim();
+
+    if (!email) {
+      showFeedbackError(activeText().emailRequired);
+      return;
+    }
+    if (!message) {
+      showFeedbackError(activeText().messageRequired);
+      return;
+    }
+
+    hideFeedbackError();
+    setFeedbackBusy(true);
+
+    try {
+      await sendFeedback(email, message);
+      setFeedbackBusy(false);
+      closeFeedbackModal();
+      status.textContent = activeText().feedbackSent;
+    } catch (error) {
+      setFeedbackBusy(false);
+      showFeedbackError(error?.message || activeText().feedbackFailed);
+    }
   });
 
   translateButton.addEventListener("click", async () => {
@@ -747,80 +923,78 @@
     glassArea.classList.remove("has-translation");
 
     streamAbortController = new AbortController();
-    const response = await fetch(`${TEXT_API_URL}/stream`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json"
-      },
-      body: JSON.stringify(payload),
-      signal: streamAbortController.signal
-    });
 
-    if (!response.ok) {
-      const data = await response.json().catch(() => null);
-      throw new Error(data?.message || `${activeText().requestFailed}: ${response.status}`);
-    }
+    streamAbortController = new AbortController();
 
-    const reader = response.body.getReader();
-    const decoder = new TextDecoder();
-    let buffer = "";
-    let receivedCount = 0;
+    // Chunked: split blocks into small groups, send one at a time
+    // Smaller prompt = faster response. First group=1 block, rest=2 blocks.
+    let renderedCount = 0;
+    const total = payload.blocks.length;
+    let i = 0;
 
-    while (true) {
-      const { done, value } = await reader.read();
-      if (done) break;
-      if (streamAbortController?.signal.aborted) break;
-
-      buffer += decoder.decode(value, { stream: true });
-
-      // Parse SSE events from buffer
-      const events = buffer.split("\n\n");
-      buffer = events.pop() || ""; // Keep incomplete event in buffer
-
-      for (const eventBlock of events) {
-        const lines = eventBlock.split("\n");
-        let eventType = "";
-        let dataStr = "";
-
-        for (const line of lines) {
-          if (line.startsWith("event: ")) {
-            eventType = line.slice(7).trim();
-          } else if (line.startsWith("data: ")) {
-            dataStr = line.slice(6).trim();
-          }
-        }
-
-        if (!dataStr) continue;
-
-        try {
-          const parsed = JSON.parse(dataStr);
-
-          if (eventType === "start") {
-            showStatusStep("stepSending", "streamStarted", { count: parsed.count });
-          } else if (eventType === "block") {
-            receivedCount++;
-            const block = parsed.block;
-            if (block && block.id && block.translatedText) {
+    // First chunk: 1 block (fastest first-byte)
+    const FIRST = 1;
+    if (i < payload.blocks.length) {
+      const chunk = { ...payload, blocks: payload.blocks.slice(i, i + FIRST) };
+      i += FIRST;
+      const res = await fetch(TEXT_API_URL, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(chunk),
+        signal: streamAbortController.signal
+      });
+      if (res.ok) {
+        const data = await res.json().catch(() => null);
+        if (Array.isArray(data?.blocks)) {
+          for (const block of data.blocks) {
+            if (block?.id && block.translatedText) {
               renderTranslationBlock(block, captureModeInput.value);
               glassArea.classList.add("has-translation");
-              showStatusStep("stepRendering", "streamProgress", {
-                current: receivedCount,
-                total: parsed.totalBlocks
-              });
+              renderedCount++;
+              showStatusStep("stepRendering", "streamProgress", { current: renderedCount, total });
             }
-          } else if (eventType === "complete") {
-            showStatusStep("stepComplete", "complete");
-            status.textContent = receivedCount > 0 ? "" : activeText().noText;
-          } else if (eventType === "error") {
-            throw new Error(parsed.message || activeText().translateFailed);
-          }
-        } catch (e) {
-          if (e.message !== activeText().translateFailed) {
-            console.warn("SSE parse error:", e);
           }
         }
+      } else if (i === FIRST) {
+        const err = await res.json().catch(() => null);
+        throw new Error(err?.message || `${activeText().requestFailed}: ${res.status}`);
       }
     }
+
+    // Remaining chunks: 2 blocks each
+    const SKIP = 2;
+    while (i < payload.blocks.length) {
+      if (streamAbortController?.signal.aborted) break;
+      const chunk = { ...payload, blocks: payload.blocks.slice(i, i + SKIP) };
+      i += SKIP;
+      try {
+        const res = await fetch(TEXT_API_URL, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(chunk),
+          signal: streamAbortController.signal
+        });
+        if (res.ok) {
+          const data = await res.json().catch(() => null);
+          if (Array.isArray(data?.blocks)) {
+            for (const block of data.blocks) {
+              if (streamAbortController?.signal.aborted) break;
+              if (block?.id && block.translatedText) {
+                renderTranslationBlock(block, captureModeInput.value);
+                glassArea.classList.add("has-translation");
+                renderedCount++;
+                showStatusStep("stepRendering", "streamProgress", { current: renderedCount, total });
+              }
+            }
+          }
+        }
+      } catch (e) {
+        if (streamAbortController?.signal.aborted) break;
+        console.warn("Chunk failed:", e.message);
+      }
+    }
+
+    status.textContent = renderedCount > 0 ? "" : activeText().noText;
   }
 
   async function requestOcrTranslationStream(payload) {
@@ -910,26 +1084,24 @@
 
   function collectTextBlocksFromGlassArea() {
     const glassRect = glassArea.getBoundingClientRect();
+    const searchRect = {
+      left: glassRect.left,
+      top: glassRect.top,
+      right: glassRect.right,
+      bottom: glassRect.bottom
+    };
+
     const walker = document.createTreeWalker(
       document.body,
       NodeFilter.SHOW_TEXT,
       {
         acceptNode(node) {
-          const text = normalizeText(node.nodeValue);
-          if (!text) return NodeFilter.FILTER_REJECT;
+          // Fast path: quick text/content check first
+          const text = node.nodeValue;
+          if (!text || text.trim().length <= 1) return NodeFilter.FILTER_REJECT;
           const parent = node.parentElement;
           if (!parent || root.contains(parent)) return NodeFilter.FILTER_REJECT;
-          if (shouldSkipElement(parent)) {
-            return NodeFilter.FILTER_REJECT;
-          }
-          const style = window.getComputedStyle(parent);
-          if (
-            style.display === "none" ||
-            style.visibility === "hidden" ||
-            Number(style.opacity) === 0
-          ) {
-            return NodeFilter.FILTER_REJECT;
-          }
+          if (shouldSkipElement(parent)) return NodeFilter.FILTER_REJECT;
           return NodeFilter.FILTER_ACCEPT;
         }
       }
@@ -940,14 +1112,24 @@
     let node = walker.nextNode();
 
     while (node) {
+      const parent = node.parentElement;
+      // Moved getComputedStyle here from acceptNode - only called for accepted nodes
+      const style = window.getComputedStyle(parent);
+      if (
+        style.display === "none" ||
+        style.visibility === "hidden" ||
+        Number(style.opacity) === 0
+      ) {
+        node = walker.nextNode();
+        continue;
+      }
+
       const range = document.createRange();
       range.selectNodeContents(node);
       const rect = range.getBoundingClientRect();
       range.detach();
 
-      if (rect.width > 0 && rect.height > 0 && intersects(rect, glassRect)) {
-        const parent = node.parentElement;
-        const style = window.getComputedStyle(parent);
+      if (rect.width > 0 && rect.height > 0 && intersects(rect, searchRect)) {
         const sourceText = normalizeText(node.nodeValue);
         if (!isMeaningfulText(sourceText)) {
           node = walker.nextNode();
@@ -1279,7 +1461,7 @@
       applyToolLanguage(defaultLanguage);
     }
 
-    applyDefaultModel(defaultModel || DEFAULT_MODEL);
+    applyDefaultModel("gpt");
     applyCaptureMode(captureMode || DEFAULT_CAPTURE_MODE);
   }
 
@@ -1292,6 +1474,10 @@
 
     root.querySelectorAll("[data-i18n]").forEach((element) => {
       element.textContent = copy[element.dataset.i18n] || element.textContent || "";
+    });
+
+    root.querySelectorAll("[data-i18n-placeholder]").forEach((element) => {
+      element.placeholder = copy[element.dataset.i18nPlaceholder] || "";
     });
 
     translateButton.title = copy.translate;
@@ -1415,61 +1601,88 @@
     return "left";
   }
 
+  function openFeedbackModal() {
+    feedbackModal.hidden = false;
+    feedbackModal.style.display = "flex";
+    feedbackEmailInput.value = "";
+    feedbackMessageInput.value = "";
+    hideFeedbackError();
+    setFeedbackBusy(false);
+    feedbackEmailInput.focus();
+  }
+
+  function closeFeedbackModal() {
+    feedbackModal.hidden = true;
+    feedbackModal.style.display = "none";
+    setFeedbackBusy(false);
+  }
+
+  function showFeedbackError(message) {
+    feedbackError.textContent = message;
+    feedbackError.hidden = false;
+  }
+
+  function hideFeedbackError() {
+    feedbackError.hidden = true;
+    feedbackError.textContent = "";
+  }
+
+  function setFeedbackBusy(busy) {
+    feedbackSendButton.disabled = busy;
+    if (busy) {
+      feedbackSendButton.dataset.originalText = feedbackSendButton.textContent;
+      feedbackSendButton.textContent = activeText().feedbackSending;
+    } else if (feedbackSendButton.dataset.originalText) {
+      feedbackSendButton.textContent = feedbackSendButton.dataset.originalText;
+      delete feedbackSendButton.dataset.originalText;
+    }
+  }
+
+  async function sendFeedback(email, message) {
+    const response = await fetch(FEEDBACK_API_URL, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify({ email, message })
+    });
+
+    const data = await response.json().catch(() => null);
+    if (!response.ok) {
+      throw new Error(data?.message || activeText().feedbackFailed);
+    }
+
+    return data;
+  }
+
   function normalizeText(text) {
     return String(text || "").replace(/\s+/g, " ").trim();
   }
 
   function shouldSkipElement(element) {
     const tagName = element.tagName?.toLowerCase();
-    if (["script", "style", "noscript", "textarea", "input", "select", "option", "button", "svg", "path"].includes(tagName)) {
-      return true;
+    if (SKIPPABLE_TAGS.has(tagName)) return true;
+    if (element.hasAttribute("aria-hidden") && element.getAttribute("aria-hidden") === "true") return true;
+    // Only walk up to 6 ancestors for structural skip (nav/header/footer)
+    let p = element;
+    for (let i = 0; i < 6 && p; i++) {
+      const t = p.tagName?.toLowerCase();
+      if (t === "nav" || t === "header" || t === "footer") return true;
+      if (p.hasAttribute?.("role") && p.getAttribute("role") === "button") return true;
+      p = p.parentElement;
     }
-
-    if (element.closest("button,[role='button'],[aria-hidden='true'],nav,header,footer")) {
-      return true;
-    }
-
-    const ariaLabel = normalizeText(element.getAttribute("aria-label"));
-    if (ariaLabel && !isMeaningfulText(ariaLabel)) return true;
-
     return false;
   }
 
   function isMeaningfulText(text) {
     const normalized = normalizeText(text);
     if (!normalized) return false;
-    if (/^[\d.,\s]+$/.test(normalized)) return false;
-    if (/^@\S{2,}$/.test(normalized)) return false;
-    if (/^\d+\s*(second|minute|hour|day|week|month|year)s?\s+ago$/i.test(normalized)) return false;
-    if (/^(edited|translated|translate to .+|show more|show less)$/i.test(normalized)) return false;
     if (normalized.length <= 1) return false;
-
-    const lower = normalized.toLowerCase();
-    const uiTexts = new Set([
-      "reply",
-      "replies",
-      "like",
-      "likes",
-      "dislike",
-      "share",
-      "save",
-      "more",
-      "read more",
-      "show more",
-      "show less",
-      "translated to chinese",
-      "translate to chinese",
-      "\ub2f5\uae00",
-      "\ub2f5",
-      "\uae00",
-      "\uc77c \uc804",
-      "\uc88b\uc544\uc694",
-      "\uacf5\uc720",
-      "\uc800\uc7a5",
-      "\ub354\ubcf4\uae30"
-    ]);
-
-    return !uiTexts.has(lower);
+    if (MEANINGFUL_TEXT_RE.test(normalized)) return false;
+    if (USERNAME_RE.test(normalized)) return false;
+    if (TIME_AGO_RE.test(normalized)) return false;
+    if (UI_FILTER_RE.test(normalized)) return false;
+    return !MEANINGFUL_UI_SET.has(normalized.toLowerCase());
   }
 
   function intersects(a, b) {
