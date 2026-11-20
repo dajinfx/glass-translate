@@ -5,7 +5,8 @@ import { parseModelJson } from "../utils/json.js";
 export const extractProductRouter = express.Router();
 
 const ALLOWED_MODELS = new Set(["gpt", "gemini", "deepseek"]);
-const MAX_PAGE_TEXT = 9000; // 截断，防超 token
+// 与扩展端 collectPageText 的 24000 上限对齐，避免服务端二次截断丢信息
+const MAX_PAGE_TEXT = 24000;
 
 /**
  * 用 AI 从清洗后的商品页文本中提取结构化商品信息。
@@ -47,26 +48,87 @@ function validatePayload(body) {
 }
 
 function normalizeModel(value) {
-  const model = String(value || process.env.DEFAULT_MODEL || "deepseek").trim();
+  // 商品信息清洗整理固定走 OpenAI（与后台翻译一致），其余模型仅作显式指定时的备选
+  const model = String(value || process.env.DEFAULT_EXTRACT_MODEL || "gpt").trim();
   if (!ALLOWED_MODELS.has(model)) {
     throwHttp(400, "INVALID_MODEL", "Unsupported model");
   }
   return model;
 }
 
+// 这些字段缺 ≥2 个时触发第二遍定向补漏
+const CRITICAL_FIELDS = ["name", "price", "description", "material", "colors", "sizes"];
+
 async function extract(input) {
-  switch (input.model) {
-    case "gpt":
-      return extractWithOpenAI(input);
-    case "gemini":
-      return extractWithGemini(input);
-    case "deepseek":
-    default:
-      return extractWithDeepSeek(input);
+  const first = await callModel(input.model, buildPrompt(input));
+  const missing = missingCritical(first);
+  if (missing.length < 2) return first;
+
+  // 二遍补漏：带着首轮结果和缺失清单定向重扫；失败不影响首轮结果
+  try {
+    const second = await callModel(input.model, buildRepairPrompt(input, first, missing));
+    return mergeResults(first, second);
+  } catch (error) {
+    console.warn("[extractProduct] repair pass failed:", error.message);
+    return first;
   }
 }
 
-async function extractWithDeepSeek(input) {
+function callModel(model, prompt) {
+  switch (model) {
+    case "gpt":
+      return extractWithOpenAI(prompt);
+    case "gemini":
+      return extractWithGemini(prompt);
+    case "deepseek":
+    default:
+      return extractWithDeepSeek(prompt);
+  }
+}
+
+function missingCritical(result) {
+  return CRITICAL_FIELDS.filter((k) => {
+    const v = result[k];
+    return v == null || (Array.isArray(v) && v.length === 0);
+  });
+}
+
+// 标量取先到的非空值，数组取并集（大小写不敏感去重）
+function mergeResults(first, second) {
+  const merged = { ...first };
+  for (const [k, v] of Object.entries(second)) {
+    if (Array.isArray(v)) {
+      const seen = new Set();
+      const out = [];
+      [...(first[k] || []), ...v].forEach((item) => {
+        const key = String(item).trim().toLowerCase();
+        if (key && !seen.has(key)) {
+          seen.add(key);
+          out.push(String(item).trim());
+        }
+      });
+      merged[k] = out;
+    } else if (merged[k] == null && v != null) {
+      merged[k] = v;
+    }
+  }
+  return merged;
+}
+
+function buildRepairPrompt(input, current, missing) {
+  return `${buildPrompt(input)}
+
+PREVIOUS ATTEMPT (incomplete):
+${JSON.stringify(current)}
+
+The fields [${missing.join(", ")}] were NOT found in the previous attempt.
+Re-scan the ENTIRE page text above specifically for these fields — they are often inside
+the VARIANTS section (selects/radios/buttons), the TABLES section, or near the end of
+PAGE_TEXT. Output the complete corrected JSON (all fields, exact same schema).
+If a field truly does not exist anywhere in the text, keep it null / [].`;
+}
+
+async function extractWithDeepSeek(prompt) {
   if (!process.env.DEEPSEEK_API_KEY) {
     throwHttp(500, "MODEL_NOT_CONFIGURED", "DEEPSEEK_API_KEY is not configured");
   }
@@ -76,26 +138,79 @@ async function extractWithDeepSeek(input) {
   });
   const response = await client.chat.completions.create({
     model: process.env.DEEPSEEK_MODEL || "deepseek-v4-flash",
-    messages: [{ role: "user", content: buildPrompt(input) }],
-    temperature: 0.1
+    messages: [{ role: "user", content: prompt }],
+    temperature: 0.1,
+    // 强制 JSON 模式：杜绝 markdown 围栏/闲聊导致的解析失败（提取返回空的主因之一）
+    response_format: { type: "json_object" }
   });
   return parseResult(response.choices?.[0]?.message?.content || "");
 }
 
-async function extractWithOpenAI(input) {
+// OpenAI 结构化输出 schema：API 层面保证返回合法 JSON 且字段齐全
+const EXTRACT_JSON_SCHEMA = {
+  type: "object",
+  additionalProperties: false,
+  required: [
+    "name", "brand", "sku", "colors", "selectedColor", "sizes",
+    "sizesOutOfStock", "price", "currency", "availability", "material",
+    "fit", "careInstructions", "description", "features", "sizeTable",
+    "rating", "reviewCount"
+  ],
+  properties: {
+    name: { type: ["string", "null"] },
+    brand: { type: ["string", "null"] },
+    sku: { type: ["string", "null"] },
+    colors: { type: "array", items: { type: "string" } },
+    selectedColor: { type: ["string", "null"] },
+    sizes: { type: "array", items: { type: "string" } },
+    sizesOutOfStock: { type: "array", items: { type: "string" } },
+    price: { type: ["number", "null"] },
+    currency: { type: ["string", "null"] },
+    availability: { type: ["string", "null"] },
+    material: { type: ["string", "null"] },
+    fit: { type: ["string", "null"] },
+    careInstructions: { type: ["string", "null"] },
+    description: { type: ["string", "null"] },
+    features: { type: "array", items: { type: "string" } },
+    sizeTable: { type: ["string", "null"] },
+    rating: { type: ["number", "null"] },
+    reviewCount: { type: ["number", "null"] }
+  }
+};
+
+async function extractWithOpenAI(prompt) {
   if (!process.env.OPENAI_API_KEY) {
     throwHttp(500, "MODEL_NOT_CONFIGURED", "OPENAI_API_KEY is not configured");
   }
   const client = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
-  const response = await client.responses.create({
+  const base = {
     model: process.env.OPENAI_TEXT_MODEL || process.env.OPENAI_VISION_MODEL || "gpt-5.4-nano",
-    input: buildPrompt(input),
+    input: prompt,
     temperature: 0.1
-  });
-  return parseResult(response.output_text || "");
+  };
+  try {
+    // 首选 json_schema 严格模式：模型被强制按 schema 输出，字段不会少、JSON 不会坏
+    const response = await client.responses.create({
+      ...base,
+      text: {
+        format: {
+          type: "json_schema",
+          name: "product_extraction",
+          schema: EXTRACT_JSON_SCHEMA,
+          strict: true
+        }
+      }
+    });
+    return parseResult(response.output_text || "");
+  } catch (error) {
+    // 模型/账号不支持结构化输出时退回普通调用（parseModelJson 兜底解析）
+    console.warn("[extractProduct] json_schema mode failed, falling back:", error.message);
+    const response = await client.responses.create(base);
+    return parseResult(response.output_text || "");
+  }
 }
 
-async function extractWithGemini(input) {
+async function extractWithGemini(prompt) {
   if (!process.env.GEMINI_API_KEY) {
     throwHttp(500, "MODEL_NOT_CONFIGURED", "GEMINI_API_KEY is not configured");
   }
@@ -105,8 +220,8 @@ async function extractWithGemini(input) {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({
-      contents: [{ role: "user", parts: [{ text: buildPrompt(input) }] }],
-      generationConfig: { temperature: 0.1 }
+      contents: [{ role: "user", parts: [{ text: prompt }] }],
+      generationConfig: { temperature: 0.1, responseMimeType: "application/json" }
     })
   });
   const data = await response.json();
@@ -127,18 +242,48 @@ function buildPrompt({ text, language }) {
   return `
 You are a structured-data extraction engine for a cross-border e-commerce tool.
 
-Below is the cleaned text of a product detail page (source language context: ${language || "unknown"}).
+Below is a raw dump of a product detail page (source language context: ${language || "unknown"}).
+The dump is organized into labeled sections, in order:
+  === JSON-LD ===   structured product data (most reliable for name/brand/sku/price/currency)
+  === META ===      page title and og:/product: meta tags (often carries price/availability/brand)
+  === VARIANTS ===  option selectors: selects, radio groups, swatch buttons. THIS is the live
+                    source of truth for colors, sizes, and stock. "[OUT_OF_STOCK]" marks a
+                    sold-out option; "[SELECTED]" marks the currently selected one.
+  === TABLES ===    serialized tables and definition lists (size charts, spec/material tables)
+  === SECTIONS ===  candidate description blocks (may include collapsed accordion content)
+  === PAGE_TEXT === the full visible page text, in DOM order
 Extract the product's factual information INTO structured JSON.
+
+EXTRACTION STRATEGY (important — follow in order):
+1. Read the ENTIRE text before answering. Relevant facts (sizes, materials, care, colors)
+   are often scattered and may appear near the END of PAGE_TEXT. Do not stop early.
+2. Cross-check sections: JSON-LD/META for identity and price; VARIANTS for colors/sizes/stock;
+   TABLES for the size chart and material composition; SECTIONS + PAGE_TEXT for description,
+   features, fit, and care instructions.
+3. Be EXHAUSTIVE for list fields: "colors" must include EVERY color option mentioned
+   anywhere; "sizes" must include EVERY size option (options marked [OUT_OF_STOCK] go into
+   "sizesOutOfStock" too).
+3b. "features" is the list of SELLING POINTS / feature HIGHLIGHTS only (e.g. "hand-painted
+    ceramic base", "5-year guarantee", "LED bulb replaceable"). DO NOT dump raw spec table
+    rows (dimensions, cable length, weight, finish, country of origin, bulb count, wattage,
+    energy rating, electrical class), shipping/delivery info, warranty terms, or packaging
+    details into "features". Each feature must be a short phrase (roughly ≤ 12 words), one
+    distinct benefit or highlight per entry, at most ~8 entries. If in doubt between a "spec"
+    and a "selling point", put the spec into "description" or "sizeTable", NOT "features".
+4. "sizeTable" is the size chart as plain text, one row per line with " | " between cells,
+   taken from TABLES if a size chart exists; otherwise null.
+5. "name" is nearly always present in META or JSON-LD — only output null for it
+   if the text clearly is not a product page at all.
 
 STRICT RULES:
 - Output ONLY facts that appear in the provided text. NEVER invent, guess, or embellish.
-- For any field NOT found in the text, output null. Do not write "unknown" or "N/A".
+- For any field NOT found in the text, output null (or [] for array fields). Do not write "unknown" or "N/A".
 - Return all values in the ORIGINAL language as they appear in the text. Do NOT translate.
-- "colors" must list ALL colors mentioned (array). "sizes" must list ALL sizes (array), and
-  "sizesOutOfStock" lists any size that is sold out / crossed out / unavailable.
-- "price" is a plain number WITHOUT currency symbol (e.g. 167.95). Put currency code in "currency".
-- "description" is the full product description paragraph(s).
-- Output ONLY valid JSON, no markdown fences, no commentary.
+- "sizesOutOfStock" lists any size that is sold out / crossed out / unavailable.
+- "price" is a plain number WITHOUT currency symbol (e.g. 167.95). Put the ISO currency code in "currency"
+  (infer from symbol: $→USD, €→EUR, £→GBP, ₩→KRW, ¥→JPY unless stated otherwise).
+- "description" is the full product description paragraph(s), concatenated if split across sections.
+- Output ONLY valid JSON matching the schema below, no markdown fences, no commentary.
 
 Page text:
 ${text}
@@ -160,6 +305,7 @@ Output JSON schema exactly:
   "careInstructions": string | null,
   "description": string | null,
   "features": string[],
+  "sizeTable": string | null,
   "rating": number | null,
   "reviewCount": number | null
 }
@@ -198,6 +344,7 @@ function parseResult(text) {
     careInstructions: str(json.careInstructions),
     description: str(json.description),
     features: strArray(json.features),
+    sizeTable: str(json.sizeTable),
     rating: num(json.rating),
     reviewCount: num(json.reviewCount)
   };
