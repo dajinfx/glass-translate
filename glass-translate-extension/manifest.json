@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "Glass Translate",
-  "version": "1.1.125",
+  "version": "1.1.128",
   "description": "Translate text from webpages, images, and PDFs with a glass-like AI vision window.",
   "icons": {
     "16": "assets/icon-16.png",
@@ -9,10 +9,20 @@
     "48": "assets/icon-48.png",
     "128": "assets/icon-128.png"
   },
-  "permissions": ["activeTab", "tabs", "scripting", "storage"],
+  "permissions": ["activeTab", "tabs", "scripting", "storage", "sidePanel"],
   "host_permissions": ["<all_urls>", "https://glass-translate-api.onrender.com/*"],
+  "content_scripts": [
+    {
+      "matches": ["*://*/*"],
+      "js": ["content/commerce/extractors/generic.js", "content/commerce/commerce.js"],
+      "run_at": "document_idle"
+    }
+  ],
   "background": {
     "service_worker": "background.js"
+  },
+  "side_panel": {
+    "default_path": "sidepanel.html"
   },
   "action": {
     "default_title": "Glass Translate",

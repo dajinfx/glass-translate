@@ -5,6 +5,8 @@ import { translateImageRouter } from "./routes/translateImage.js";
 import { translateTextRouter } from "./routes/translateText.js";
 import { privacyRouter } from "./routes/privacy.js";
 import { feedbackRouter } from "./routes/feedback.js";
+import { generateDetailRouter } from "./routes/generateDetail.js";
+import { extractProductRouter } from "./routes/extractProduct.js";
 
 const app = express();
 const port = Number(process.env.PORT || 3000);
@@ -19,6 +21,8 @@ app.get("/health", (req, res) => {
 
 app.use("/api/translate-image", translateImageRouter);
 app.use("/api/translate-text", translateTextRouter);
+app.use("/api/generate-detail", generateDetailRouter);
+app.use("/api/extract", extractProductRouter);
 app.use("/api/feedback", feedbackRouter);
 app.use("/privacy", privacyRouter);
 

@@ -1,0 +1,168 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Glass Commerce · 生成详情页</title>
+  <style>
+    :root {
+      --bg: #f8fafc;
+      --card: #ffffff;
+      --border: #e2e8f0;
+      --text: #0f172a;
+      --muted: #64748b;
+      --accent: #2563eb;
+      --danger: #dc2626;
+      --warn: #d97706;
+      --ok: #16a34a;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: Inter, ui-sans-serif, system-ui, -apple-system, "Segoe UI", Arial, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      font-size: 14px;
+      line-height: 1.5;
+    }
+    .panel { padding: 16px; display: flex; flex-direction: column; gap: 12px; }
+    .header {
+      display: flex; align-items: center; gap: 8px;
+      font-size: 15px; font-weight: 700;
+      padding-bottom: 12px; border-bottom: 1px solid var(--border);
+    }
+    .header .logo { font-size: 20px; }
+    .card {
+      background: var(--card); border: 1px solid var(--border);
+      border-radius: 10px; padding: 14px;
+    }
+    .empty { text-align: center; color: var(--muted); padding: 36px 12px; }
+    .empty .icon { font-size: 40px; margin-bottom: 8px; }
+    button {
+      display: inline-flex; align-items: center; justify-content: center; gap: 6px;
+      min-height: 36px; padding: 0 16px; border: 1px solid var(--accent);
+      border-radius: 8px; background: var(--accent); color: #fff;
+      font-size: 13px; font-weight: 600; cursor: pointer;
+    }
+    button:hover { opacity: 0.92; }
+    button:disabled { opacity: 0.5; cursor: not-allowed; }
+    button.secondary { background: #fff; color: var(--accent); }
+    .field-label {
+      font-size: 11px; font-weight: 700; color: var(--muted);
+      margin-bottom: 4px; text-transform: uppercase; letter-spacing: 0.02em;
+    }
+    .status-badge {
+      display: inline-block; padding: 2px 8px; border-radius: 999px;
+      font-size: 11px; font-weight: 600; margin-right: 4px; margin-bottom: 4px;
+    }
+    .status-confirmed { background: #dcfce7; color: var(--ok); }
+    .status-missing { background: #fef3c7; color: var(--warn); }
+    .meta-row { display: flex; gap: 4px; flex-wrap: wrap; margin-bottom: 8px; }
+    .editable {
+      width: 100%; border: 1px solid var(--border); border-radius: 6px;
+      padding: 8px; font: inherit; resize: vertical;
+    }
+    .img-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-top: 8px; }
+    .img-grid .thumb {
+      aspect-ratio: 3/4; border-radius: 8px; overflow: hidden;
+      border: 2px solid var(--border); cursor: grab; position: relative; background: #f1f5f9;
+    }
+    .img-grid .thumb img { width: 100%; height: 100%; object-fit: cover; display: block; }
+    .img-grid .thumb .idx {
+      position: absolute; top: 4px; left: 4px; background: rgba(0,0,0,0.6);
+      color: #fff; font-size: 10px; padding: 2px 6px; border-radius: 4px;
+    }
+    .preview-phone {
+      width: 100%; max-width: 340px; margin: 0 auto;
+      border: 1px solid var(--border); border-radius: 16px; overflow: hidden; background: #fff;
+    }
+    .preview-hero img { width: 100%; aspect-ratio: 3/4; object-fit: cover; display: block; }
+    .preview-title { padding: 12px 14px; font-size: 15px; font-weight: 700; }
+    .preview-section { padding: 4px 14px 12px; }
+    .preview-section .label { font-size: 11px; font-weight: 700; color: var(--muted); text-transform: uppercase; margin-bottom: 4px; }
+    .sp-row { display: flex; gap: 8px; align-items: center; margin-top: 6px; }
+    .sp-dot { width: 28px; height: 28px; border-radius: 8px; background: #eef2ff; display: flex; align-items: center; justify-content: center; font-size: 13px; flex-shrink: 0; }
+    .sp-text { font-size: 13px; }
+    .toast {
+      position: fixed; bottom: 16px; left: 50%; transform: translateX(-50%);
+      background: #0f172a; color: #fff; padding: 8px 16px; border-radius: 8px;
+      font-size: 13px; z-index: 9999; transition: opacity 0.3s; display: none;
+    }
+    .toolbar { display: flex; gap: 8px; flex-wrap: wrap; }
+    .field-status { font-size: 12px; color: var(--muted); margin-top: 4px; }
+    .muted { color: var(--muted); font-size: 12px; }
+    .hidden { display: none !important; }
+    .detail-row { margin-bottom: 10px; }
+    .detail-row .k {
+      font-size: 11px; font-weight: 700; color: var(--muted);
+      text-transform: uppercase; letter-spacing: 0.02em; margin-bottom: 2px;
+    }
+    .detail-row .v { font-size: 13px; white-space: pre-wrap; word-break: break-word; }
+    .detail-row .v.empty { color: #cbd5e1; font-style: italic; }
+  </style>
+</head>
+<body>
+  <div class="panel">
+    <div class="header">
+      <span class="logo">🛒</span>
+      <span>Glass Commerce · 生成详情页</span>
+    </div>
+
+    <!-- 空状态 -->
+    <div id="empty-state" class="card empty">
+      <div class="icon">🔍</div>
+      <div>尚未提取商品</div>
+      <div class="muted">在商品页点击右下角「生成详情页」按钮</div>
+    </div>
+
+    <!-- 主内容（提取后显示） -->
+    <div id="main-content" class="hidden">
+      <div class="card">
+        <div class="field-label">商品信息</div>
+        <div id="badges" class="meta-row"></div>
+        <div id="product-meta" class="field-status"></div>
+      </div>
+
+      <!-- 提取详情：完整展示所有字段 -->
+      <div id="details-card" class="card">
+        <div class="field-label">提取详情</div>
+        <div id="details-body"></div>
+      </div>
+
+      <div class="toolbar">
+        <button id="generate-btn">✨ 生成文案</button>
+        <button id="save-btn" class="secondary">💾 存草稿</button>
+      </div>
+      <div id="draft-saved" class="muted hidden"></div>
+
+      <!-- 预览 -->
+      <div id="preview" class="preview-phone hidden"></div>
+
+      <!-- 编辑区 -->
+      <div id="editor" class="card hidden">
+        <div class="field-label">标题</div>
+        <input id="edit-title" class="editable" />
+        <div class="field-label" style="margin-top:10px;">卖点（每行一条）</div>
+        <textarea id="edit-points" class="editable" rows="3"></textarea>
+        <div class="field-label" style="margin-top:10px;">规格文案</div>
+        <textarea id="edit-spec" class="editable" rows="4"></textarea>
+      </div>
+
+      <!-- 图片排序 -->
+      <div id="imgs-card" class="card hidden">
+        <div class="field-label">图片排序（拖动调整）</div>
+        <div id="img-grid" class="img-grid"></div>
+      </div>
+
+      <!-- 导出 -->
+      <div id="export-row" class="toolbar hidden">
+        <button id="export-text-btn" class="secondary">📋 复制文本</button>
+      </div>
+    </div>
+
+    <div id="toast" class="toast"></div>
+  </div>
+
+  <script src="sidepanel.js"></script>
+</body>
+</html>
