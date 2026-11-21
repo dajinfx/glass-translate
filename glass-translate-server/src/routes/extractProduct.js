@@ -356,7 +356,7 @@ function parseResult(text) {
     fit: str(json.fit),
     careInstructions: str(json.careInstructions),
     description: str(json.description),
-    features: strArray(json.features),
+    features: sanitizeFeatures(json.features),
     sizeTable: str(json.sizeTable),
     rating: num(json.rating),
     reviewCount: num(json.reviewCount)
@@ -368,4 +368,38 @@ function throwHttp(status, code, message) {
   error.status = status;
   error.code = code;
   throw error;
+}
+
+/**
+ * 代码级硬过滤 features：AI 即使把导航/客服/分类/推荐词误判成卖点，也在最后一道关卡被确定性删除。
+ * 不依赖 prompt 软约束，用关键词 + 正则确定性匹配。
+ */
+function sanitizeFeatures(features) {
+  if (!Array.isArray(features)) return [];
+
+  // 特征：导航/分类目录行结尾（모두 보기 / View all / See all 等）
+  const NAV_TAIL = /(모두 보기|查看全部|查看全部|全部|see\s*all|view\s*all|alle\s*ansehen|zur\s*Übersicht|anzeigen)\s*$/i;
+
+  // 客服/联系/FAQ/页脚链接特征（쇼핑하러 가기 / 문의하기 / 자주 묻는 질문 / 전화 / 주문 상태 …）
+  const CONTACT = /(쇼핑하러 가기|문의하기|문의 양식|자주 묻는 질문|도움말|주문 상태|전화하세요|문의\s*양식|고객\s*서비스|블로그로 가기|기본 창고로 가기|kontakt|hilfe|faq|fragen|bestellstatus|newsletter|anmelden|service)/i;
+
+  // 纯品类词/分类名词堆砌（재킷/언더웨어/바지/셔츠/수영복 + » 等），以及带导航箭头的行
+  const CATEGORY = /(재킷|언더웨어|바지|셔츠|수영복|조끼|후디|드레스|스커트|오버롤|장갑|모자|안경|양말|액세서리|신발|헬멧|백팩|가방|클라이밍|슬랙라인|캠핑|트레킹|등산)/i;
+  const ARROW = /»|≫|>|»|›/;
+  const PHONE = /\+\d{1,3}[\s\-]?\d{2,4}/;
+  const URLISH = /(https?:\/\/|www\.|\.de\b|\.com\b)/i;
+
+  return features
+    .map((f) => String(f || "").trim())
+    .filter(Boolean)
+    .filter((f) => {
+      if (f.length > 140) return false; // 过长基本是正文段落，不是卖点短语
+      if (NAV_TAIL.test(f)) return false; // 目录行结尾
+      if (CONTACT.test(f)) return false; // 客服/联系/FAQ
+      if (PHONE.test(f)) return false; // 含电话号码
+      if (URLISH.test(f)) return false; // 含 URL/域名
+      if (ARROW.test(f)) return false; // 含导航箭头
+      if (CATEGORY.test(f)) return false; // 纯品类词
+      return true;
+    });
 }
