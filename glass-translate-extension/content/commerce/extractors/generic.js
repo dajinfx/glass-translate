@@ -70,6 +70,28 @@
     return String(text || "").replace(/\s+/g, " ").trim();
   }
 
+  // 从段落文本里剔除 Google 翻译/浏览器翻译注入的译文节点，只保留原始语言文本。
+  // Google 翻译会把原文文本节点替换成 <font style="vertical-align:...">译文</font>，
+  // 或在 <html> 上打 translated-ltr/rtl 类；这里把那些译文节点剥离，避免采到脏译文。
+  function stripTranslation(el) {
+    if (!el) return "";
+    const clone = el.cloneNode(true);
+    // 去掉 Google 翻译包裹的字体节点（译文载体）
+    clone.querySelectorAll("font[style*='vertical-align']").forEach((n) => n.remove());
+    // 去掉常见翻译库注入的元素
+    clone.querySelectorAll('[class*="notranslate"] [data-google-translate], [data-translate]').forEach((n) => n.remove());
+    return clean(clone.textContent);
+  }
+
+  // 判断节点是否属于翻译注入的译文载体（应被剔除）
+  function isTranslationNode(el) {
+    if (!el) return false;
+    const tag = el.tagName && el.tagName.toLowerCase();
+    if (tag === "font" && /vertical-align/i.test(el.getAttribute("style") || "")) return true;
+    if (el.closest && el.closest('font[style*="vertical-align"]')) return true;
+    return false;
+  }
+
   // 字段级安全校验：抓到的字段值若明显是「评论用户名/账户文案/加载占位/纯数字日期」等噪声，
   //   则判定为误抓（返回 true），由调用方放弃该值、交给后端 AI。
   function looksLikeNoiseField(text) {
@@ -687,10 +709,8 @@
 
     // 3) 变体选择器（尺码/颜色/库存的真实来源——下拉框选项、radio 组、swatch 按钮，
     //    这些在纯文本遍历里抓不到或丢失 disabled/checked 状态）
-    //    注意：这些 DOM 文本会被 Google 翻译改写成了译文（脏数据），一旦检测到污染必须跳过，
-    //    否则 Glass Commerce 提取的颜色/尺码会被 Google 翻译影响，违背隔离原则。
+    //    始终采集；若节点被翻译注入，stripTranslation 会剔除译文保留原文。
     const variantLines = [];
-    if (!isGoogleTranslated) {
     document.querySelectorAll("select").forEach((sel) => {
       const label = clean(sel.getAttribute("aria-label") || sel.name || sel.id || "select");
       const opts = Array.from(sel.options)
@@ -726,12 +746,10 @@
     if (variantLines.length) {
       chunks.push("=== VARIANTS ===\n" + variantLines.join("\n").slice(0, 3000));
     }
-    } // end if(!isGoogleTranslated) — VARIANTS
 
     // 4) 表格 + 定义列表（尺码表、规格/成分表几乎都长这样）
-    //    同样受 Google 翻译污染影响，污染时跳过。
+    //    始终采集；stripTranslation 剔除翻译节点保留原文。
     const tableLines = [];
-    if (!isGoogleTranslated) {
     Array.from(document.querySelectorAll("table")).slice(0, 5).forEach((tb, i) => {
       const rows = Array.from(tb.querySelectorAll("tr")).slice(0, 30)
         .map((tr) => Array.from(tr.querySelectorAll("th,td")).map((c) => clean(c.textContent)).join(" | "))
@@ -748,12 +766,9 @@
     if (tableLines.length) {
       chunks.push("=== TABLES ===\n" + tableLines.join("\n\n").slice(0, 3500));
     }
-    } // end if(!isGoogleTranslated) — TABLES
 
     // 5) 正文容器里的候选段落（去掉 script/style/nav/header/footer）。
     //    注意：这里不做可见性过滤——折叠手风琴里的描述/洗护说明正是要抓的内容。
-    //    若页面已被 Google 翻译改写，这些正文文本已变成译文（脏数据），跳过。
-    if (!isGoogleTranslated) {
     const blocked = "script,style,noscript,svg,iframe,header,footer,nav,form";
     const containers = document.querySelectorAll(
       '[itemprop="description"], [class*="product-detail" i], [class*="product-info" i], ' +
@@ -787,13 +802,11 @@
     if (sectionTexts.length) {
       chunks.push("=== SECTIONS ===\n" + sectionTexts.join("\n---\n"));
     }
-    } // end if(!isGoogleTranslated)
 
     // 6) 主路径：采集整个 body 的可见文本节点（结构化、按 DOM 顺序，不剔除商品信息区）。
     //    这是通用解——不依赖 JSON-LD、不依赖候选容器是否匹配某站 DOM。
     //    很多电商站（Zappos/HOKA）商品信息靠 JS 渲染、分散在右侧，不在这里就永远抓不到。
-    //    若页面已被 Google 翻译改写，可见文本已是译文（脏数据），跳过。
-    if (!isGoogleTranslated && document.body) {
+    if (document.body) {
       // 隐藏判定带缓存：同一父元素下的多个文本节点只算一次
       const visCache = new WeakMap();
       const isHidden = (el) => {
