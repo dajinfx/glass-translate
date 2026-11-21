@@ -297,36 +297,34 @@ function mergeProducts(ai, dom) {
     merged.price = dom.price;
   }
 
-  // 列表字段取并集：AI 和 DOM 谁抓到算谁的，大小写不敏感去重
-  const unionList = (a = [], b = []) => {
-    const seen = new Set();
-    const out = [];
-    [...a, ...b].forEach((v) => {
-      const t = String(v ?? "").trim();
-      const key = t.toLowerCase();
-      if (t && !seen.has(key)) {
-        seen.add(key);
-        out.push(t);
-      }
-    });
-    return out;
-  };
+  // 列表字段（colors/sizes）不再与 DOM 并集，见下方分别处理。
 
-  const colors = unionList(merged.allColors?.list, dom.allColors?.list);
-  if (colors.length) {
-    merged.allColors = { value: colors.join(", "), source: "ai+dom", status: "confirmed", list: colors };
+  // colors（全部颜色列表）不跟 DOM 并集：DOM 选择器从被 Google 翻译污染的 DOM 里抓到译文字符串
+  // （빨간색/감청색/검은색），会污染后端 AI 翻译好的中文列表。colors 只信任后端 AI 输出，
+  // 与 features 同理（DOM 扫全页是把脏数据）。单值 color 也已在 aiResultToProduct 用 AI 结果。
+  // 仅当 AI 完全没拿到 colors 时才回退到 DOM 补齐。
+  const aiColors = merged.allColors?.list || [];
+  if (!aiColors.length && (dom.allColors?.list || []).length) {
+    merged.allColors = {
+      value: dom.allColors.list.join(", "),
+      source: "dom",
+      status: "confirmed",
+      list: dom.allColors.list
+    };
   }
 
-  const outOfStock = unionList(merged.sizes?.outOfStock, dom.sizes?.outOfStock);
-  const inStock = unionList(merged.sizes?.inStock || merged.sizes?.list, dom.sizes?.inStock)
-    .filter((s) => !outOfStock.some((o) => o.toLowerCase() === s.toLowerCase()));
-  if (inStock.length || outOfStock.length) {
+  // sizes（尺码列表）同样不跟 DOM 并集：DOM 选择器从被翻译污染的 DOM 里抓到译文（如
+  // 「Bitte auswählen」德语未翻译），会污染后端 AI 翻译好的列表。AI 空才回退 DOM。
+  const aiSizes = merged.sizes?.all || merged.sizes?.list || [];
+  if (!aiSizes.length && ((dom.sizes?.inStock || []).length || (dom.sizes?.outOfStock || []).length)) {
+    const inStock = dom.sizes?.inStock || [];
+    const outOfStock = dom.sizes?.outOfStock || [];
     merged.sizes = {
       value: inStock.join(", "),
-      source: "ai+dom",
+      source: "dom",
       status: "confirmed",
       list: inStock,
-      all: unionList(inStock, outOfStock),
+      all: [...inStock, ...outOfStock],
       inStock,
       outOfStock
     };
