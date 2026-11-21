@@ -62,16 +62,53 @@ const CRITICAL_FIELDS = ["name", "price", "description", "material", "colors", "
 async function extract(input) {
   const first = await callModel(input.model, buildPrompt(input));
   const missing = missingCritical(first);
-  if (missing.length < 2) return first;
+  const result = missing.length < 2 ? first : (await (async () => {
+    try {
+      const second = await callModel(input.model, buildRepairPrompt(input, first, missing));
+      return mergeResults(first, second);
+    } catch (error) {
+      console.warn("[extractProduct] repair pass failed:", error.message);
+      return first;
+    }
+  })());
 
-  // 二遍补漏：带着首轮结果和缺失清单定向重扫；失败不影响首轮结果
-  try {
-    const second = await callModel(input.model, buildRepairPrompt(input, first, missing));
-    return mergeResults(first, second);
-  } catch (error) {
-    console.warn("[extractProduct] repair pass failed:", error.message);
-    return first;
+  // 颜色是枚举值，AI 往往把德语/英语颜色名（Rot/Schwarz/Royal）当品牌色名原样输出、不翻译，
+  // 导致「全部颜色」混入原文。这里在 AI 输出后做确定性映射，不依赖 AI 是否遵守 prompt。
+  return localizeColors(result, input.language);
+}
+
+// 常见颜色名的「原文 → 目标语言」确定性映射（大小写不敏感）。
+// 颜色是封闭枚举，用查表比让 AI 翻译更稳定，避免 Rot/Schwarz/Royal 等原文漏翻。
+const COLOR_MAP = {
+  zh: {
+    rot: "红色", schwarz: "黑色", royal: "藏青色", blau: "蓝色",
+    weiss: "白色", weiß: "白色", gruen: "绿色", grün: "绿色",
+    gelb: "黄色", orange: "橙色", rosa: "粉色", pink: "粉色",
+    grau: "灰色", braun: "棕色", beige: "米色", lila: "紫色",
+    violet: "紫色", gold: "金色", silber: "银色", red: "红色",
+    black: "黑色", blue: "蓝色", white: "白色", green: "绿色",
+    yellow: "黄色", grey: "灰色", gray: "灰色", brown: "棕色",
+    purple: "紫色", navy: "藏青色", turquoise: "青绿色", anthracite: "炭灰色",
+    anthrazit: "炭灰色"
   }
+};
+
+function localizeColors(result, language) {
+  const table = COLOR_MAP[String(language || "").toLowerCase().slice(0, 2)];
+  if (!table) return result;
+
+  const mapOne = (value) => {
+    const key = String(value ?? "").trim().toLowerCase();
+    return table[key] || value;
+  };
+
+  if (Array.isArray(result.colors)) {
+    result.colors = result.colors.map(mapOne);
+  }
+  if (result.selectedColor != null) {
+    result.selectedColor = mapOne(result.selectedColor);
+  }
+  return result;
 }
 
 function callModel(model, prompt) {
