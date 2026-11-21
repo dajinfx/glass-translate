@@ -630,6 +630,15 @@
   function collectPageText() {
     const chunks = [];
 
+    // 检测页面是否已被 Chrome 原生 Google 页面翻译改写（污染源）。
+    // Google 翻译会在 <html> 上打 translated-ltr/translated-rtl 类，正文文本节点被换成译文。
+    // 一旦命中，第 5/6 步的正文 DOM 采集就被跳过——那些文本已经是译文（脏数据），
+    // 只剩 JSON-LD + meta + title 这类 Google 翻译不碰的原始结构化数据，才干净可靠。
+    const htmlEl = document.documentElement;
+    const isGoogleTranslated = /(^|\s)translated-(ltr|rtl)(\s|$)/i.test(htmlEl.className || "")
+      || !!htmlEl.querySelector("font[style*='vertical-align']")
+      || document.body?.querySelectorAll("font[style*='vertical-align']").length > 0;
+
     // 1) JSON-LD（商品结构化数据最干净，优先）
     //    只保留含 Product 的节点并限长，避免面包屑/评论等 JSON-LD 吃掉总字符预算
     const jsonld = [];
@@ -713,6 +722,8 @@
 
     // 5) 正文容器里的候选段落（去掉 script/style/nav/header/footer）。
     //    注意：这里不做可见性过滤——折叠手风琴里的描述/洗护说明正是要抓的内容。
+    //    若页面已被 Google 翻译改写，这些正文文本已变成译文（脏数据），跳过。
+    if (!isGoogleTranslated) {
     const blocked = "script,style,noscript,svg,iframe,header,footer,nav,form";
     const containers = document.querySelectorAll(
       '[itemprop="description"], [class*="product-detail" i], [class*="product-info" i], ' +
@@ -746,11 +757,13 @@
     if (sectionTexts.length) {
       chunks.push("=== SECTIONS ===\n" + sectionTexts.join("\n---\n"));
     }
+    } // end if(!isGoogleTranslated)
 
     // 6) 主路径：采集整个 body 的可见文本节点（结构化、按 DOM 顺序，不剔除商品信息区）。
     //    这是通用解——不依赖 JSON-LD、不依赖候选容器是否匹配某站 DOM。
     //    很多电商站（Zappos/HOKA）商品信息靠 JS 渲染、分散在右侧，不在这里就永远抓不到。
-    if (document.body) {
+    //    若页面已被 Google 翻译改写，可见文本已是译文（脏数据），跳过。
+    if (!isGoogleTranslated && document.body) {
       // 隐藏判定带缓存：同一父元素下的多个文本节点只算一次
       const visCache = new WeakMap();
       const isHidden = (el) => {
