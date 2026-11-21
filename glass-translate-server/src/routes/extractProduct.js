@@ -243,6 +243,8 @@ function buildPrompt({ text, language }) {
 You are a structured-data extraction engine for a cross-border e-commerce tool.
 
 Below is a raw dump of a product detail page (source language context: ${language || "unknown"}).
+
+OUTPUT LANGUAGE: Translate every extracted text value into ${language || "English"}. Keep numbers, sizes (e.g. 116/128), SKUs, brand names, and URLs exactly as-is.
 The dump is organized into labeled sections, in order:
   === JSON-LD ===   structured product data (most reliable for name/brand/sku/price/currency)
   === META ===      page title and og:/product: meta tags (often carries price/availability/brand)
@@ -291,7 +293,7 @@ EXTRACTION STRATEGY (important — follow in order):
 STRICT RULES:
 - Output ONLY facts that appear in the provided text. NEVER invent, guess, or embellish.
 - For any field NOT found in the text, output null (or [] for array fields). Do not write "unknown" or "N/A".
-- Return all values in the ORIGINAL language as they appear in the text. Do NOT translate.
+- Translate all human-readable text values into ${language || "English"} (the OUTPUT LANGUAGE above). Keep numbers, sizes, SKUs, brand names, and URLs unchanged.
 - "sizesOutOfStock" lists any size that is sold out / crossed out / unavailable.
 - "price" is a plain number WITHOUT currency symbol (e.g. 167.95). Put the ISO currency code in "currency"
   (infer from symbol: $→USD, €→EUR, £→GBP, ₩→KRW, ¥→JPY unless stated otherwise).
