@@ -11,7 +11,9 @@ export function normalizeBlocks(blocks, viewport) {
 function normalizeBlock(block, index, viewport) {
   if (!block || typeof block !== "object") return null;
 
-  const translatedText = String(block.translatedText || "").trim();
+  // 译文为空时用原文兜底，绝不因空译文而丢弃块——否则 blocks 数组缩水、位置错乱，
+  // 下游 background 按 id/位置回写就会全线错位，翻译静默失败。
+  const translatedText = String(block.translatedText || block.sourceText || "").trim();
   if (!translatedText) return null;
 
   const maxWidth = Number(viewport?.width || 2000);

@@ -111,11 +111,15 @@ function normalizeResult(parsedTranslations, input) {
     .map((block) => String(block?.translatedText || "").trim())
     .filter(Boolean);
 
+  // 位置对齐：无论模型返回什么 id、返回几块，都按输入顺序一对一写回。
+  // 译文为空时用「模型按位置给出的译文」兜底；再空则回退原文，绝不留下空译文让下游丢块。
   const resultBlocks = inputBlocks.map((block, i) => {
     let translatedText = translatedById.get(block.id) || "";
-    if (!translatedText && validTranslated.length === inputBlocks.length) {
+    if (!translatedText && i < validTranslated.length) {
+      // 位置索引优先：只要模型按顺序返回了第 i 块，就用它（数量对齐时必然命中）
       translatedText = validTranslated[i] || "";
     }
+    if (!translatedText) translatedText = block.sourceText || "";
     return {
       ...block,
       translatedText
