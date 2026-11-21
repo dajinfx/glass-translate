@@ -122,6 +122,59 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
 });
 
 /**
+ * 从原始 HTML 字符串里抽取干净文本（JSON-LD Product + meta + 表格 + 正文本体）。
+ * 用 DOMParser 解析，与页面当前（可能被 Google 翻译污染的）DOM 完全隔离。
+ */
+function extractTextFromHtml(html) {
+  try {
+    const doc = new DOMParser().parseFromString(html, "text/html");
+    const chunks = [];
+
+    // 1) JSON-LD（商品结构化数据最干净，只保留 Product）
+    const jsonld = [];
+    doc.querySelectorAll('script[type="application/ld+json"]').forEach((s) => {
+      const t = (s.textContent || "").trim();
+      if (t && /"@type"\s*:\s*("|\[\s*")?\w*Product/i.test(t)) jsonld.push(t);
+    });
+    if (jsonld.length) chunks.push("=== JSON-LD ===\n" + jsonld.join("\n---\n").slice(0, 5000));
+
+    // 2) title + 商品相关 meta
+    const metaLines = [];
+    const title = doc.querySelector("title")?.textContent || "";
+    if (title) metaLines.push("title: " + title.trim());
+    doc.querySelectorAll("meta[property], meta[name], meta[itemprop]").forEach((m) => {
+      const k = m.getAttribute("property") || m.getAttribute("name") || m.getAttribute("itemprop") || "";
+      if (!/^(og:|product:|twitter:)|description|price|currency|availability|brand|color|title/i.test(k)) return;
+      const v = (m.getAttribute("content") || "").trim().replace(/\s+/g, " ");
+      if (v && v.length <= 300) metaLines.push(k + ": " + v);
+    });
+    if (metaLines.length) chunks.push("=== META ===\n" + metaLines.slice(0, 40).join("\n"));
+
+    // 3) 表格（尺码表/规格表）
+    const tableLines = [];
+    doc.querySelectorAll("table").forEach((tb, i) => {
+      if (i >= 5) return;
+      const rows = Array.from(tb.querySelectorAll("tr")).slice(0, 30)
+        .map((tr) => Array.from(tr.querySelectorAll("th,td")).map((c) => (c.textContent || "").trim().replace(/\s+/g, " ")).join(" | "))
+        .filter((r) => r.replace(/\|/g, "").trim());
+      if (rows.length) tableLines.push("[table " + (i + 1) + "]\n" + rows.join("\n"));
+    });
+    if (tableLines.length) chunks.push("=== TABLES ===\n" + tableLines.join("\n\n").slice(0, 3500));
+
+    // 4) 正文本体（去脚本/样式/导航/页头页尾）
+    doc.querySelectorAll("script,style,noscript,svg,iframe,header,footer,nav,form").forEach((n) => n.remove());
+    const bodyText = (doc.body?.innerText || "")
+      .split(/\n+/).map((l) => l.trim()).filter((l) => l.length >= 2)
+      .slice(0, 600).join("\n");
+    if (bodyText) chunks.push("=== PAGE_TEXT ===\n" + bodyText.slice(0, 12000));
+
+    return chunks.join("\n\n\n").slice(0, 24000);
+  } catch (_) {
+    return "";
+  }
+}
+
+/**
  * AI 提取：抓当前页面的清洗后的文本，调 /api/extract 让 AI 抽取结构化字段，
  * 再映射成现有 ProductRecord 格式返回。对任意网站通用。
  */
@@ -133,30 +186,64 @@ async function handleCommerceExtractAI(tab, message) {
     files: ["content/commerce/extractors/generic.js"]
   });
 
-  // 拉取当前页的清洗文本，同时跑一次 DOM 选择器提取（用于补齐 AI 丢掉的字段/图片/尺码表）
-  const textResults = await chrome.scripting.executeScript({
+  // 数据源优先级：
+  //   1) fetch 当前商品页 URL → 服务器返回的【原始语言 HTML】，从干净原文抽取，
+  //      彻底绕开 Google 翻译对页面 DOM 的污染（商品内容语言只由「语言设置 + 生成详情按钮」决定）。
+  //   2) 回退：注入脚本抓当前 DOM（可能已被 Google 翻译改写）。
+  let text = "";
+  let domProduct = null;
+
+  const pageUrl = tab.url || "";
+  if (/^https?:\/\//i.test(pageUrl)) {
+    try {
+      const rawRes = await fetch(pageUrl, {
+        credentials: "include",
+        headers: { "Accept": "text/html" }
+      });
+      if (rawRes.ok) {
+        const rawHtml = await rawRes.text();
+        const freshText = extractTextFromHtml(rawHtml);
+        if (freshText && freshText.length >= 80) {
+          text = freshText;
+        }
+      }
+    } catch (_) {
+      // fetch 原始 HTML 失败（跨域/CSP/网络/需登录页）→ 忽略，走 DOM 回退
+    }
+  }
+
+  // 回退：抓当前 DOM（可能被 Google 翻译污染）
+  if (!text) {
+    const textResults = await chrome.scripting.executeScript({
+      target: { tabId: tab.id },
+      func: () => {
+        try {
+          const collect = window.__glassCommerceCollectPageText;
+          if (typeof collect !== "function") throw new Error("collectPageText not found");
+          return { ok: true, text: collect() };
+        } catch (error) {
+          return { ok: false, error: error.message };
+        }
+      }
+    });
+    text = textResults?.[0]?.result?.text || "";
+  }
+
+  // 始终再跑一次 DOM 选择器提取（图片/尺码表/rawSections 等只在活动 DOM 里的内容）
+  const domResults = await chrome.scripting.executeScript({
     target: { tabId: tab.id },
     func: () => {
       try {
-        const collect = window.__glassCommerceCollectPageText;
-        if (typeof collect !== "function") throw new Error("collectPageText not found");
-        let domProduct = null;
-        try {
-          const extract = window.__glassCommerceExtractor;
-          if (typeof extract === "function") domProduct = extract();
-        } catch (_) {
-          // DOM 提取失败不阻塞 AI 提取
-        }
-        return { ok: true, text: collect(), domProduct };
-      } catch (error) {
-        return { ok: false, error: error.message };
-      }
+        const extract = window.__glassCommerceExtractor;
+        if (typeof extract === "function") return { ok: true, product: extract() };
+        return { ok: false };
+      } catch (_) { return { ok: false }; }
     }
   });
-  const text = textResults?.[0]?.result?.text || "";
-  const domProduct = textResults?.[0]?.result?.domProduct || null;
-  if (!textResults?.[0]?.result?.ok || !text) {
-    throw new Error(textResults?.[0]?.result?.error || "No page text collected");
+  domProduct = domResults?.[0]?.result?.product || null;
+
+  if (!text) {
+    throw new Error("No page text collected");
   }
 
   // 商品信息清洗整理跟随 Glass Translate 设置面板的默认模型，保持一致；未设置时用 gpt
