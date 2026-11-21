@@ -166,7 +166,7 @@
   position: absolute;
   right: 0;
   bottom: calc(100% + 8px);
-  z-index: 30;
+  z-index: 2147483647;
   display: flex;
   flex-direction: column;
   gap: 3px;
@@ -306,6 +306,33 @@
   color: #1d4ed8;
 }
 
+#glass-translate-root .research-button {
+  display: block;
+  flex: 0 0 auto;
+  height: 28px;
+  margin: 0;
+  padding: 0 12px;
+  border: 1px solid rgba(100, 116, 139, 0.55);
+  border-radius: 8px;
+  background: #fff;
+  color: #334155;
+  cursor: pointer;
+  font-size: 12px;
+  font-weight: 600;
+  white-space: nowrap;
+  transition: background-color 120ms ease, border-color 120ms ease, color 120ms ease, transform 120ms ease;
+}
+
+#glass-translate-root .research-button:hover {
+  background: #f1f5f9;
+  border-color: rgba(100, 116, 139, 0.8);
+  color: #1e293b;
+}
+
+#glass-translate-root .research-button:active {
+  transform: translateY(1px);
+}
+
 #glass-translate-root .settings-button {
   margin: 0;
   border: 1px solid rgba(100, 116, 139, 0.7);
@@ -333,8 +360,8 @@
   position: absolute;
   top: calc(100% + 8px);
   right: 36px;
-  z-index: 40;
-  width: 118px;
+  z-index: 2147483647;
+  width: 168px;
   padding: 10px;
   border: 1px solid rgba(226, 232, 240, 0.95);
   border-radius: 6px;
@@ -385,6 +412,9 @@
   margin-top: 8px;
   width: 100%;
   height: 28px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
   border: 1px solid rgba(100, 116, 139, 0.55);
   border-radius: 8px;
   background: #fff;
@@ -563,7 +593,7 @@
 
 #glass-translate-root .resize-handle {
   position: absolute;
-  z-index: 20;
+  z-index: 2147483647;
   background: transparent;
   touch-action: none;
   user-select: none;
