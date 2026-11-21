@@ -198,7 +198,13 @@ async function handleCommerceExtractAI(tab, message) {
     try {
       const rawRes = await fetch(pageUrl, {
         credentials: "include",
-        headers: { "Accept": "text/html" }
+        headers: {
+          "Accept": "text/html",
+          // 关键：强制以德语原文请求。用户浏览器语言是韩语时，服务器会直接返回韩语版页面，
+          // 导致抓到的商品内容是韩语而非原文。这里固定请求德语，拿到原始商品文本后再由
+          // 后端 AI 按用户选择的语言（语言设置 + 生成详情按钮）翻译。
+          "Accept-Language": "de-DE,de;q=0.9,en;q=0.8"
+        }
       });
       if (rawRes.ok) {
         const rawHtml = await rawRes.text();
