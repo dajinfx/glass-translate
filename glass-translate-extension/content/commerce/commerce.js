@@ -647,14 +647,23 @@
         product = await runExtractor();
       }
 
+      // 后端 /api/extract 已按 targetLanguageName() 直接输出目标语言内容（中文），
+      // 主字段（name/brand/color/material/fit/care/description/features 等）不再二次翻译。
+      // 但「提取详情」的 rawSections 是后端原样返回的原始采集段落（未翻译），必须由
+      // 前端 translateProductContent 补齐翻译，否则面板里 rawSections 永远是源语言（德语）。
+      let finalProduct = product;
+      try {
+        finalProduct = (await translateProductContent(product)) || product;
+      } catch (e) {
+        console.warn("[GlassCommerce] 字段翻译回退原样展示", e);
+        finalProduct = product;
+      }
+
       // 存 storage（供可能的 side panel 兼容读取）+ 翻译字段值后渲染到浮动窗口
-      chrome.runtime.sendMessage({ type: "GLASS_COMMERCE_PREVIEW", product });
-      renderProduct(product);
+      chrome.runtime.sendMessage({ type: "GLASS_COMMERCE_PREVIEW", product: finalProduct });
+      renderProduct(finalProduct);
       toggleWindow(true);
       syncWindowState(true);
-
-      // 后端 /api/extract 已按 targetLanguageName() 直接输出目标语言内容（中文），
-      // 前端不再二次翻译，避免把已翻译好的内容再次“翻译”造成污染/结构崩溃。
 
       btn.innerHTML = `<span>${t("done")}</span>`;
       btn.disabled = true;
