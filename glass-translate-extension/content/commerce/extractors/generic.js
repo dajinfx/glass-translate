@@ -63,6 +63,24 @@
     return String(text || "").replace(/\s+/g, " ").trim();
   }
 
+  // 字段级安全校验：抓到的字段值若明显是「评论用户名/账户文案/加载占位/纯数字日期」等噪声，
+  //   则判定为误抓（返回 true），由调用方放弃该值、交给后端 AI。
+  function looksLikeNoiseField(text) {
+    const t = String(text || "").trim();
+    if (!t) return true;
+    if (t.length < 3 || t.length > 2000) return true;
+    // 加载占位符
+    if (/^(loader|loading|スケルトン|skeleton|spinner|lade|chargement|로딩)\b/i.test(t)) return true;
+    // 账户/登录/注册文案
+    if (/(开设客户账户|创建账户|登录|登入|注册|账号|账户|account|login|register|sign ?in|sign ?up|konto|anmelden|개설|계정|로그인)/i.test(t)) return true;
+    // 评论/好评率/日期（“84% 的用户认为…有帮助” / “2018-11-09” / 用户名）
+    if (/(%\s*(的)?用户|%의 사용자|helfen|hilfreich|helpful|认为.*有帮助|的用户认为|评论|评价|리뷰|후기|review)/i.test(t)) return true;
+    if (/^\d{4}-\d{2}-\d{2}$/.test(t)) return true; // 纯日期
+    // 客服/联系/FAQ/页脚
+    if (/(문의|문의하기|자주 묻는 질문|도움말|联系方式|客服|联系我们|kontakt|hilfe|faq|customer service)/i.test(t)) return true;
+    return false;
+  }
+
   function typeOf(node) {
     const t = node?.["@type"];
     if (Array.isArray(t)) return t.join(",");
@@ -466,20 +484,32 @@
     // 洗护
     if (!fieldConfirmed(product.careInstructions)) {
       const careSel =
-        document.querySelector('[class*="care" i]') ||
-        document.querySelector('[data-testid*="care" i]') ||
+        document.querySelector('[itemprop="careInstructions"]') ||
+        document.querySelector('[class*="care-instruction" i]') ||
         document.querySelector('[class*="washing" i]') ||
         document.querySelector('[class*="fabric-care" i]') ||
-        document.querySelector('[class*="machine wash" i]');
-      setField(product, "careInstructions", careSel?.textContent, "dom:care");
+        document.querySelector('[class*="pflege" i]') ||
+        document.querySelector('[class*="Waschanleitung" i]') ||
+        document.querySelector('[data-testid*="care" i]');
+      const careText = clean(careSel?.textContent || "");
+      // 防御：洗护内容若是评论用户名/账户文案/加载占位，则放弃，交给后端 AI
+      if (careText && !looksLikeNoiseField(careText)) {
+        setField(product, "careInstructions", careText, "dom:care");
+      }
     }
 
     // 版型
     if (!fieldConfirmed(product.fit)) {
       const fitSel =
-        document.querySelector('[class*="fit" i]') ||
-        document.querySelector('[class*="sizing" i]');
-      setField(product, "fit", fitSel?.textContent, "dom:fit");
+        document.querySelector('[class*="fit-guide" i]') ||
+        document.querySelector('[class*="fit-information" i]') ||
+        document.querySelector('[class*="sizing" i]') ||
+        document.querySelector('[itemprop="sizing" i]') ||
+        document.querySelector('[class*="passform" i]');
+      const fitText = clean(fitSel?.textContent || "");
+      if (fitText && !looksLikeNoiseField(fitText)) {
+        setField(product, "fit", fitText, "dom:fit");
+      }
     }
 
     // 图片 —— 确定性通用收集，不靠 URL 关键词 / class 名猜。
