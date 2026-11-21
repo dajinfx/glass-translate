@@ -48,8 +48,11 @@
   }
 
   function setField(obj, key, value, source) {
-    if (value && String(value).trim()) {
-      obj[key] = { value: String(value).trim(), source, status: "confirmed" };
+    // 统一用 clean 压缩连续空白（\s+ → 单空格）：避免 textContent 里 <br>/空 <p> 的成串 \n
+    // 在面板渲染时被 white-space:pre-wrap 摊成大片空白。
+    const v = clean(value);
+    if (v) {
+      obj[key] = { value: v, source, status: "confirmed" };
     } else {
       obj[key] = { value: "", source: "", status: "missing" };
     }
@@ -337,6 +340,22 @@
         setField(product, "color", selected, "dom:colorDisplayGroup");
       } else if (colors.length && !fieldConfirmed(product.color)) {
         setField(product, "color", colors[0], "dom:colorDisplayGroup");
+      }
+    }
+
+    // 通用颜色变体 fallback（Template Cloud / tc- 主题等）：
+    //   颜色缩略图是 div.variant-farbe 里的 li 项，每项含一个 img，颜色名在 img[alt]（如 Rot/Royal/Schwarz）。
+    //   这类站没有 data-testid 选择器，也不给选中项带 active/selected class，
+    //   所以这里是“全部颜色”的唯一可究来源。
+    if (!product.allColors?.list?.length) {
+      const tcColorImgs = Array.from(document.querySelectorAll('.variant-farbe img[alt], .variant-color img[alt]'));
+      const tcColors = [];
+      tcColorImgs.forEach((img) => {
+        const c = clean(img.getAttribute("alt") || "");
+        if (c && c.length <= 40 && !/\|/.test(c) && !tcColors.includes(c)) tcColors.push(c);
+      });
+      if (tcColors.length >= 2) {
+        product.allColors = { value: tcColors.join(", "), source: "dom:variant-farbe", status: "confirmed", list: tcColors };
       }
     }
 

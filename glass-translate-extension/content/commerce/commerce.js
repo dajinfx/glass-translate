@@ -684,6 +684,12 @@
     push("brand", v(product.brand));
     push("color", v(product.color));
     if (product.allColors?.list?.length) push("allColors", product.allColors.list.join(", "));
+    const sizesIn = product.sizes?.inStock || product.sizes?.list || [];
+    const sizesOut = product.sizes?.outOfStock || [];
+    if (sizesIn.length || sizesOut.length) {
+      const sizesText = sizesIn.join(", ") + (sizesOut.length ? " (" + sizesOut.join(", ") + ")" : "");
+      push("sizes", sizesText);
+    }
     push("availability", v(product.availability));
     push("material", v(product.material));
     push("fit", v(product.fit));
@@ -717,6 +723,16 @@
     setT(out.material, "material");
     setT(out.fit, "fit");
     setT(out.careInstructions, "care");
+    if (out.allColors?.list?.length && translatedMap.allColors) {
+      out.allColors.list = translatedMap.allColors.split(/\s*[,，]\s*/).filter(Boolean);
+      out.allColors.value = out.allColors.list.join(", ");
+    }
+    if (out.sizes && translatedMap.sizes) {
+      const sizeParts = translatedMap.sizes;
+      out.sizes.inStock = sizeParts;
+      out.sizes.list = sizeParts;
+      out.sizes.outOfStock = [];
+    }
     if (out.sizeTable && translatedMap.sizeTable) out.sizeTable.value = translatedMap.sizeTable;
     setT(out.description, "description");
     if (out.features?.length && translatedMap.features) {
