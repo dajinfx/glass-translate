@@ -103,16 +103,29 @@ function normalizeResult(parsedTranslations, input) {
       .filter(([id, translatedText]) => id && translatedText)
   );
 
+  // 关键：模型不一定如实回传自定义 id，多块时 id 对不上号会导致回写为空、翻译静默失败。
+  // 兑底：按「输入块顺序」逐位对齐——只要模型返回的译文数量 >= 输入块数，
+  // 就用位置索引一对一写回，彻底不依赖 id。只有当数量对不齐时，才回退用 id 匹配。
+  const inputBlocks = Array.isArray(input.blocks) ? input.blocks : [];
+  const validTranslated = (parsedTranslations || [])
+    .map((block) => String(block?.translatedText || "").trim())
+    .filter(Boolean);
+
+  const resultBlocks = inputBlocks.map((block, i) => {
+    let translatedText = translatedById.get(block.id) || "";
+    if (!translatedText && validTranslated.length === inputBlocks.length) {
+      translatedText = validTranslated[i] || "";
+    }
+    return {
+      ...block,
+      translatedText
+    };
+  });
+
   return {
     sourceLanguage: "unknown",
     targetLanguage: input.targetLanguage,
-    blocks: normalizeBlocks(
-      input.blocks.map((block) => ({
-        ...block,
-        translatedText: translatedById.get(block.id) || ""
-      })),
-      input.viewport
-    )
+    blocks: normalizeBlocks(resultBlocks, input.viewport)
   };
 }
 
