@@ -777,7 +777,10 @@
 
   async function runExtractorAI() {
     return new Promise((resolve, reject) => {
-      const language = window.__glassCommerceLanguage || "English";
+      // 目标语言直接取 UI 选择（和字段翻译 targetLanguageName() 同一来源）。
+      // 之前读 window.__glassCommerceLanguage 该变量从未被赋值，永远 undefined → fallback "English"，
+      // 导致用户在 UI 选中文后，提取内容语言仍不受控制（输出源语言/韩语脏数据）。
+      const language = targetLanguageName() || "English";
       chrome.runtime.sendMessage(
         { type: "GLASS_COMMERCE_EXTRACT_AI", language },
         (response) => {
