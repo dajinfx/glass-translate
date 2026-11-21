@@ -263,13 +263,23 @@ EXTRACTION STRATEGY (important — follow in order):
 3. Be EXHAUSTIVE for list fields: "colors" must include EVERY color option mentioned
    anywhere; "sizes" must include EVERY size option (options marked [OUT_OF_STOCK] go into
    "sizesOutOfStock" too).
-3b. "features" is the list of SELLING POINTS / feature HIGHLIGHTS only (e.g. "hand-painted
-    ceramic base", "5-year guarantee", "LED bulb replaceable"). DO NOT dump raw spec table
-    rows (dimensions, cable length, weight, finish, country of origin, bulb count, wattage,
-    energy rating, electrical class), shipping/delivery info, warranty terms, or packaging
-    details into "features". Each feature must be a short phrase (roughly ≤ 12 words), one
-    distinct benefit or highlight per entry, at most ~8 entries. If in doubt between a "spec"
-    and a "selling point", put the spec into "description" or "sizeTable", NOT "features".
+3b. "features" is ONLY the selling points / feature highlights of THE SINGLE PRODUCT being
+    sold on this page (e.g. "hand-painted ceramic base", "5-year guarantee", "LED bulb
+    replaceable"). It must describe THIS product's own benefits, NOT other products.
+    STRICTLY EXCLUDE any of the following — they are NEVER features:
+      - Site navigation / category listings / taxonomy: "Shoes", "Socks", "Backpacks",
+        "Sleeping bags", "Tents", "Thermos", "Footwear", "Men's / Women's / Kids", any
+        item ending in "» View all / 모두 보기 / See all", breadcrumbs, menu items, or folder/
+        category labels. These are the site's shopping-card nav, not THIS product's highlights.
+      - Names/brands/prices of OTHER products (recommendations, "you may also like",
+        "similar items", bestsellers).
+      - Raw spec table rows (dimensions, weight, country of origin, bulb count, wattage,
+        energy rating, electrical class), shipping/delivery info, warranty terms, packaging.
+    Each feature must be a short phrase (roughly ≤ 12 words), ONE distinct benefit per entry,
+    at most ~8 entries. If the text only contains navigation/category words and no real
+    product selling points can be found, output "features": [] (empty) rather than filling
+    it with category names. If in doubt between a "spec" and a "selling point", put the spec
+    into "description" or "sizeTable", NOT "features".
 4. "sizeTable" is the size chart as plain text, one row per line with " | " between cells,
    taken from TABLES if a size chart exists; otherwise null.
 5. "name" is nearly always present in META or JSON-LD — only output null for it
