@@ -690,7 +690,7 @@
     const sizesIn = product.sizes?.inStock || product.sizes?.list || [];
     const sizesOut = product.sizes?.outOfStock || [];
     if (sizesIn.length || sizesOut.length) {
-      const sizesText = sizesIn.join(", ") + (sizesOut.length ? " (" + sizesOut.join(", ") + ")" : "");
+      const sizesText = sizesIn.join(", ") + (sizesOut.length ? "（" + sizesOut.join(", ") + "）" : "");
       push("sizes", sizesText);
     }
     push("availability", v(product.availability));
@@ -731,10 +731,19 @@
       out.allColors.value = out.allColors.list.join(", ");
     }
     if (out.sizes && translatedMap.sizes) {
-      const sizeParts = translatedMap.sizes;
-      out.sizes.inStock = sizeParts;
-      out.sizes.list = sizeParts;
-      out.sizes.outOfStock = [];
+      // translatedMap.sizes 是后端返回的一个【字符串】（可能带“（缺货：...）”），
+      // 而 product.sizes 的 value/list/all/inStock/outOfStock 全部必须是【数组】。
+      // 直接把字符串塞进数组字段会导致 renderProduct 里 .join() 抛 TypeError，
+      // 使整个 renderProduct(translated) 中途崩溃，后续字段全部不渲染。
+      const sizeStr = String(translatedMap.sizes || "");
+      const parts = sizeStr.replace(/（[^）]*）/g, "").split(/\s*[,，、/]\s*/).map((s) => s.trim()).filter(Boolean);
+      if (parts.length) {
+        out.sizes.value = parts.join(", ");
+        out.sizes.list = parts;
+        out.sizes.all = parts;
+        out.sizes.inStock = parts;
+        out.sizes.outOfStock = [];
+      }
     }
     if (out.sizeTable && translatedMap.sizeTable) out.sizeTable.value = translatedMap.sizeTable;
     setT(out.description, "description");
