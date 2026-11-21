@@ -687,7 +687,10 @@
 
     // 3) 变体选择器（尺码/颜色/库存的真实来源——下拉框选项、radio 组、swatch 按钮，
     //    这些在纯文本遍历里抓不到或丢失 disabled/checked 状态）
+    //    注意：这些 DOM 文本会被 Google 翻译改写成了译文（脏数据），一旦检测到污染必须跳过，
+    //    否则 Glass Commerce 提取的颜色/尺码会被 Google 翻译影响，违背隔离原则。
     const variantLines = [];
+    if (!isGoogleTranslated) {
     document.querySelectorAll("select").forEach((sel) => {
       const label = clean(sel.getAttribute("aria-label") || sel.name || sel.id || "select");
       const opts = Array.from(sel.options)
@@ -723,9 +726,12 @@
     if (variantLines.length) {
       chunks.push("=== VARIANTS ===\n" + variantLines.join("\n").slice(0, 3000));
     }
+    } // end if(!isGoogleTranslated) — VARIANTS
 
     // 4) 表格 + 定义列表（尺码表、规格/成分表几乎都长这样）
+    //    同样受 Google 翻译污染影响，污染时跳过。
     const tableLines = [];
+    if (!isGoogleTranslated) {
     Array.from(document.querySelectorAll("table")).slice(0, 5).forEach((tb, i) => {
       const rows = Array.from(tb.querySelectorAll("tr")).slice(0, 30)
         .map((tr) => Array.from(tr.querySelectorAll("th,td")).map((c) => clean(c.textContent)).join(" | "))
@@ -742,6 +748,7 @@
     if (tableLines.length) {
       chunks.push("=== TABLES ===\n" + tableLines.join("\n\n").slice(0, 3500));
     }
+    } // end if(!isGoogleTranslated) — TABLES
 
     // 5) 正文容器里的候选段落（去掉 script/style/nav/header/footer）。
     //    注意：这里不做可见性过滤——折叠手风琴里的描述/洗护说明正是要抓的内容。
