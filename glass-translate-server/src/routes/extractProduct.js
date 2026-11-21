@@ -272,7 +272,12 @@ EXTRACTION STRATEGY (important — follow in order):
         item ending in "» View all / 모두 보기 / See all", breadcrumbs, menu items, or folder/
         category labels. These are the site's shopping-card nav, not THIS product's highlights.
       - Names/brands/prices of OTHER products (recommendations, "you may also like",
-        "similar items", bestsellers).
+        "similar items", bestsellers — e.g. lines that start with a brand name + a product
+        name + a price / "할인" / discount %).
+      - Customer REVIEWS / ratings / user feedback — anything phrased as a shopper's
+        opinion (e.g. "장점/단점" pros/cons, "사용 용도" usage, "너무 짧아요", "두 번 입고
+        망가졌어요"). These are OPINIONS about the product, not the product's own
+        marketing selling points. NEVER copy review prose into features.
       - Raw spec table rows (dimensions, weight, country of origin, bulb count, wattage,
         energy rating, electrical class), shipping/delivery info, warranty terms, packaging.
     Each feature must be a short phrase (roughly ≤ 12 words), ONE distinct benefit per entry,
