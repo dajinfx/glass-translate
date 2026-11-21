@@ -674,7 +674,10 @@
   async function translateProductContent(product) {
     if (!product) return null;
     const targetLang = targetLanguageName() || "English";
-    if (targetLang === "English") return null; // 目标语言是英文则无需翻译（原值通常是英文/源语言）
+    // 旧逻辑：目标语言是英文就直接短路，导致 UI_LANG 状态哪怕是 en（未同步到 zh），
+    // 翻译也会被静默跳过，韩语/德语脏数据原样留下。
+    // 新逻辑：不再依赖这个脆弱的短路。只收集所有字段的可见文本，
+    // 若文本里存在韩文/日文/中文等非拉丁字符（即确需翻译），就照常翻译。
 
     const v = (x) => (x && (x.value || x.text)) ? String(x.value || x.text).trim() : "";
     const blocks = [];
