@@ -161,6 +161,30 @@ function extractTextFromHtml(html) {
     });
     if (tableLines.length) chunks.push("=== TABLES ===\n" + tableLines.join("\n\n").slice(0, 3500));
 
+    // 3b) 颜色/尺码变体（VARIANTS：色块 <li>/<a title>/<img alt>、下拉 select>option、radio）。
+    //     颜色选项的唯一可靠来源（如 cortexpower 的 div.variant-farbe 里 a[title]="Rot"）。
+    //     静态 HTML 里就有（服务端渲染），必须采集，否则后端 AI 只能从正文抠到 1 个颜色。
+    const variantColors = [];
+    const variantSizes = [];
+    const pushUnique = (arr, v) => {
+      const t = String(v ?? "").trim().replace(/\s+/g, " ");
+      if (t && t.length <= 40 && !arr.includes(t)) arr.push(t);
+    };
+    // 色块：div.variant-farbe/.variant-color/.variant-item 里的 <li>，颜色名在 a[title] 或 img[alt]
+    doc.querySelectorAll('.variant-farbe li, .variant-color li, .variant-item li, [class*="color-variant"] li, .sizes li').forEach((li) => {
+      const a = li.querySelector('a[title]');
+      const img = li.querySelector('img[alt]');
+      const label = (a && a.getAttribute("title")) || (img && img.getAttribute("alt")) || "";
+      if (label) pushUnique(variantColors, label);
+    });
+    // 下拉/radio：颜色名在 option 文本或 radio 的 aria-label/value
+    doc.querySelectorAll('select option, [name*="color" i] option, [name*="variant" i] option').forEach((opt) => {
+      const t = (opt.getAttribute("value") || opt.textContent || "").trim();
+      if (t && t.length <= 40) pushUnique(variantSizes, t);
+    });
+    if (variantColors.length) chunks.push("=== VARIANTS (colors) ===\n" + variantColors.join(", "));
+    if (variantSizes.length) chunks.push("=== VARIANTS (sizes) ===\n" + variantSizes.join(", "));
+
     // 4) 正文本体（去脚本/样式/导航/页头页尾）
     doc.querySelectorAll("script,style,noscript,svg,iframe,header,footer,nav,form").forEach((n) => n.remove());
     const bodyText = (doc.body?.innerText || "")
