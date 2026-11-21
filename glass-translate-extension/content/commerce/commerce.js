@@ -653,10 +653,8 @@
       toggleWindow(true);
       syncWindowState(true);
 
-      // 异步翻译字段值（商品名/描述/材质等），完成后刷新显示
-      translateProductContent(product).then((translated) => {
-        if (translated) renderProduct(translated);
-      }).catch((e) => console.warn("[GlassCommerce] 字段翻译失败", e));
+      // 后端 /api/extract 已按 targetLanguageName() 直接输出目标语言内容（中文），
+      // 前端不再二次翻译，避免把已翻译好的内容再次“翻译”造成污染/结构崩溃。
 
       btn.innerHTML = `<span>${t("done")}</span>`;
       btn.disabled = true;

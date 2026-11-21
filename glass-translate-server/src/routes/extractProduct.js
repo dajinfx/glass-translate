@@ -291,7 +291,9 @@ EXTRACTION STRATEGY (important — follow in order):
 STRICT RULES:
 - Output ONLY facts that appear in the provided text. NEVER invent, guess, or embellish.
 - For any field NOT found in the text, output null (or [] for array fields). Do not write "unknown" or "N/A".
-- Return all values in the ORIGINAL language as they appear in the text. Do NOT translate.
+- Return all human-readable values TRANSLATED into the requested language (${language}).
+  Output name/brand/color/colors/material/fit/careInstructions/description/features/sizeTable/availability/sizes
+  in ${language}. Do NOT keep the original source language. Translate their MEANING faithfully.
 - "sizesOutOfStock" lists any size that is sold out / crossed out / unavailable.
 - "price" is a plain number WITHOUT currency symbol (e.g. 167.95). Put the ISO currency code in "currency"
   (infer from symbol: $→USD, €→EUR, £→GBP, ₩→KRW, ¥→JPY unless stated otherwise).
