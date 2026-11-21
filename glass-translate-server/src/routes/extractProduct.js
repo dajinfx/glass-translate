@@ -103,7 +103,18 @@ function localizeColors(result, language) {
   };
 
   if (Array.isArray(result.colors)) {
-    result.colors = result.colors.map(mapOne);
+    // 映射后去重：同一颜色可能既以中文（红色）又以原文（Rot）被 AI 输出，
+    // 映射后变成两个「红色」，必须合并，否则数量膨胀（真实 3 色变 4 项）。
+    const seen = new Set();
+    const out = [];
+    result.colors.map(mapOne).forEach((c) => {
+      const key = String(c ?? "").trim().toLowerCase();
+      if (key && !seen.has(key)) {
+        seen.add(key);
+        out.push(c);
+      }
+    });
+    result.colors = out;
   }
   if (result.selectedColor != null) {
     result.selectedColor = mapOne(result.selectedColor);
