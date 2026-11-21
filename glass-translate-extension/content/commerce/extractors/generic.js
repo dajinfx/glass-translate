@@ -743,6 +743,14 @@
       }
     });
     if (swatchTexts.length >= 2) variantLines.push("buttons: " + swatchTexts.slice(0, 80).join(" | "));
+    // 颜色色块：部分站的颜色变体不是 select/radio/button，而是 div.variant-farbe 里的
+    // <a title="Rot"><img alt="Rot"/></a>。这类颜色名在 a[title]/img[alt]，不抓就漏掉。
+    const swatchImgs = [];
+    document.querySelectorAll('.variant-farbe a[title], .variant-farbe img[alt], .variant-color a[title], .variant-color img[alt], .variant-item a[title], .variant-item img[alt], [class*="color-variant"] img[alt]').forEach((el) => {
+      const t = clean(el.getAttribute("title") || el.getAttribute("alt"));
+      if (t && t.length <= 40 && !/(jpg|png|webp|http|\.com)/i.test(t) && !swatchImgs.includes(t)) swatchImgs.push(t);
+    });
+    if (swatchImgs.length >= 2) variantLines.push("colors: " + swatchImgs.slice(0, 80).join(" | "));
     if (variantLines.length) {
       chunks.push("=== VARIANTS ===\n" + variantLines.join("\n").slice(0, 3000));
     }

@@ -259,6 +259,32 @@ async function handleCommerceExtractAI(tab, message) {
     text = textResults?.[0]?.result?.text || "";
   }
 
+  // 始终再跑一次 DOM 提取，拿到「变体（颜色/尺码）」这类只存在于活动 DOM 的可靠信息。
+  // fetch 原始 HTML 因 Accept-Language 是 forbidden header（手动设 de 会被 Chrome 静默剥掉、
+  // 改用浏览器默认语言），在这个站上拿不到完整德语颜色变体，导致 AI 只抠到 1 个颜色。
+  // 因此颜色/尺码变体必须以活动 DOM 为准，不能依赖 fetch。
+  let domVariants = "";
+  try {
+    const vr = await chrome.scripting.executeScript({
+      target: { tabId: tab.id },
+      func: () => {
+        try {
+          const c = window.__glassCommerceCollectPageText;
+          if (typeof c !== "function") return "";
+          const full = c();
+          const m = full.match(/=== VARIANTS ===\n([\s\S]*?)(?=\n=== |$)/);
+          return m ? ("=== VARIANTS ===\n" + m[1].trim()) : "";
+        } catch (_) { return ""; }
+      }
+    });
+    domVariants = vr?.[0]?.result || "";
+  } catch (_) { /* 忽略 */ }
+
+  // 若 fetch 结果里没有 VARIANTS 段（或缺失），用 DOM 采集的变体段补上
+  if (domVariants && !/=== VARIANTS/m.test(text)) {
+    text = (text ? text + "\n\n" : "") + domVariants;
+  }
+
   // 始终再跑一次 DOM 选择器提取（图片/尺码表/rawSections 等只在活动 DOM 里的内容）
   const domResults = await chrome.scripting.executeScript({
     target: { tabId: tab.id },
