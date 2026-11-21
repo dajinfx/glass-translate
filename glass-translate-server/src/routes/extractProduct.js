@@ -264,27 +264,25 @@ EXTRACTION STRATEGY (important — follow in order):
    anywhere; "sizes" must include EVERY size option (options marked [OUT_OF_STOCK] go into
    "sizesOutOfStock" too).
 3b. "features" is ONLY the selling points / feature highlights of THE SINGLE PRODUCT being
-    sold on this page (e.g. "hand-painted ceramic base", "5-year guarantee", "LED bulb
-    replaceable"). It must describe THIS product's own benefits, NOT other products.
-    STRICTLY EXCLUDE any of the following — they are NEVER features:
-      - Site navigation / category listings / taxonomy: "Shoes", "Socks", "Backpacks",
-        "Sleeping bags", "Tents", "Thermos", "Footwear", "Men's / Women's / Kids", any
-        item ending in "» View all / 모두 보기 / See all", breadcrumbs, menu items, or folder/
-        category labels. These are the site's shopping-card nav, not THIS product's highlights.
+    sold on this page. A valid feature is a SHORT phrase describing one of THIS product's own
+    product attributes — its material, function, craftsmanship, origin, warmth/breathability,
+    fit, or similar intrinsic benefit (e.g. "hand-painted ceramic base", "mulesing-free merino
+    wool", "breathable and quick-drying").
+    STRICTLY EXCLUDE — these are NEVER features, no matter how they are worded:
+      - Site navigation / category lists / taxonomy ("Shoes", "Backpacks", "남성/여성/아동",
+        anything ending in "» 모두 보기 / View all / See all", breadcrumbs, folder labels).
       - Names/brands/prices of OTHER products (recommendations, "you may also like",
-        "similar items", bestsellers — e.g. lines that start with a brand name + a product
-        name + a price / "할인" / discount %).
-      - Customer REVIEWS / ratings / user feedback — anything phrased as a shopper's
-        opinion (e.g. "장점/단점" pros/cons, "사용 용도" usage, "너무 짧아요", "두 번 입고
-        망가졌어요"). These are OPINIONS about the product, not the product's own
-        marketing selling points. NEVER copy review prose into features.
-      - Raw spec table rows (dimensions, weight, country of origin, bulb count, wattage,
-        energy rating, electrical class), shipping/delivery info, warranty terms, packaging.
-    Each feature must be a short phrase (roughly ≤ 12 words), ONE distinct benefit per entry,
-    at most ~8 entries. If the text only contains navigation/category words and no real
-    product selling points can be found, output "features": [] (empty) rather than filling
-    it with category names. If in doubt between a "spec" and a "selling point", put the spec
-    into "description" or "sizeTable", NOT "features".
+        bestsellers, discount cards).
+      - Customer REVIEWS / ratings / user opinions ("장점/단점" pros/cons, "사용 용도",
+        "너무 짧아요").
+      - Customer-service / contact / support / FAQ / footer link text ("쇼핑하러 가기", "문의하기",
+        "자주 묻는 질문", phone numbers like "+49 …", "주문 상태", newsletter/social links).
+      - Raw spec table rows (dimensions, weight, country of origin, wattage, energy rating),
+        shipping/delivery info, warranty, packaging.
+    Output at most ~8 features. If fewer than 2 REAL product selling points can be found among
+    all this noise, output "features": [] (empty) — it is FAR better to return empty than to
+    fill features with navigation/contact/category text. If in doubt between a "spec" and a
+    "selling point", put the spec into "description" or "sizeTable", NOT "features".
 4. "sizeTable" is the size chart as plain text, one row per line with " | " between cells,
    taken from TABLES if a size chart exists; otherwise null.
 5. "name" is nearly always present in META or JSON-LD — only output null for it
