@@ -195,6 +195,8 @@
 
     const btn = document.createElement("button");
     btn.id = BUTTON_ID;
+    btn.setAttribute("translate", "no");
+    btn.classList.add("notranslate");
     btn.textContent = t("generate");
     btn.style.cssText = `
       position: fixed; right: 22px; bottom: 22px; z-index: 2147483000;
@@ -350,6 +352,8 @@
 
     const win = document.createElement("div");
     win.id = WINDOW_ID;
+    win.setAttribute("translate", "no");
+    win.classList.add("notranslate");
     win.innerHTML = `
       <div class="gcw-header">
         <span class="logo">🛒</span>

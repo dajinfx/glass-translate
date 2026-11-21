@@ -1,4 +1,4 @@
-(() => {
+﻿(() => {
   if (window.__glassTranslateInjected) {
     const existingRoot = document.getElementById("glass-translate-root");
     if (existingRoot) existingRoot.classList.toggle("is-hidden");
@@ -184,6 +184,18 @@
       canvasFailed: "\u30b9\u30af\u30ea\u30fc\u30f3\u30b7\u30e7\u30c3\u30c8\u7528\u30ad\u30e3\u30f3\u30d0\u30b9\u3092\u4f5c\u6210\u3067\u304d\u307e\u305b\u3093",
       imageLoadFailed: "\u30b9\u30af\u30ea\u30fc\u30f3\u30b7\u30e7\u30c3\u30c8\u753b\u50cf\u306e\u8aad\u307f\u8fbc\u307f\u306b\u5931\u6557\u3057\u307e\u3057\u305f",
       requestFailed: "\u30b5\u30fc\u30d3\u30b9\u30ea\u30af\u30a8\u30b9\u30c8\u306b\u5931\u6557\u3057\u307e\u3057\u305f",
+      feedback: "\u30d5\u30a3\u30fc\u30c9\u30d0\u30c3\u30af",
+      feedbackEmail: "\u30e1\u30fc\u30eb",
+      feedbackEmailPlaceholder: "\u30e1\u30fc\u30eb\u3092\u5165\u529b",
+      feedbackMessage: "\u30d5\u30a3\u30fc\u30c9\u30d0\u30c3\u30af\u5185\u5bb9",
+      feedbackMessagePlaceholder: "\u30d5\u30a3\u30fc\u30c9\u30d0\u30c3\u30af\u3092\u5165\u529b",
+      feedbackSend: "\u9001\u4fe1",
+      feedbackSending: "\u9001\u4fe1\u4e2d...",
+      feedbackSent: "\u30d5\u30a3\u30fc\u30c9\u30d0\u30c3\u30af\u3092\u9001\u4fe1\u3057\u307e\u3057\u305f\u3002\u3042\u308a\u304c\u3068\u3046\u3054\u3056\u3044\u307e\u3059\uff01",
+      feedbackFailed: "\u9001\u4fe1\u306b\u5931\u6557\u3057\u307e\u3057\u305f\u3002\u5f8c\u3067\u3082\u3046\u4e00\u5ea6\u304a\u8a66\u3057\u304f\u3060\u3055\u3044\u3002",
+      emailRequired: "\u30e1\u30fc\u30eb\u3092\u5165\u529b\u3057\u3066\u304f\u3060\u3055\u3044",
+      messageRequired: "\u30d5\u30a3\u30fc\u30c9\u30d0\u30c3\u30af\u5185\u5bb9\u3092\u5165\u529b\u3057\u3066\u304f\u3060\u3055\u3044",
+      cancel: "\u30ad\u30e3\u30f3\u30bb\u30eb",
       close: "\u9589\u3058\u308b", stop: "\u505c\u6b62", minimize: "\u6700\u5c0f\u5316", maximize: "\u6700\u5927\u5316"
     },
     ko: {
@@ -205,6 +217,18 @@
       canvasFailed: "\uc2a4\ud06c\ub9b0\uc0f7 \uce94\ubc84\uc2a4\ub97c \ub9cc\ub4e4 \uc218 \uc5c6\uc2b5\ub2c8\ub2e4",
       imageLoadFailed: "\uc2a4\ud06c\ub9b0\uc0f7 \uc774\ubbf8\uc9c0\ub97c \ubd88\ub7ec\uc624\uc9c0 \ubabb\ud588\uc2b5\ub2c8\ub2e4",
       requestFailed: "\uc11c\ube44\uc2a4 \uc694\uccad \uc2e4\ud328",
+      feedback: "\ud53c\ub4dc\ubc31",
+      feedbackEmail: "\uc774\uba54\uc77c",
+      feedbackEmailPlaceholder: "\uc774\uba54\uc77c\uc744 \uc785\ub825\ud558\uc138\uc694",
+      feedbackMessage: "\ud53c\ub4dc\ubc31 \ub0b4\uc6a9",
+      feedbackMessagePlaceholder: "\ud53c\ub4dc\ubc31\uc744 \uc785\ub825\ud558\uc138\uc694",
+      feedbackSend: "\ubcf4\ub0b4\uae30",
+      feedbackSending: "\uc804\uc1a1 \uc911...",
+      feedbackSent: "\ud53c\ub4dc\ubc31\uc774 \uc804\uc1a1\ub410\uc2b5\ub2c8\ub2e4. \uac10\uc0ac\ud569\ub2c8\ub2e4!",
+      feedbackFailed: "\uc804\uc1a1\uc5d0 \uc2e4\ud328\ud588\uc2b5\ub2c8\ub2e4. \uc7a0\uc2dc \ud6c4 \ub2e4\uc2dc \uc2dc\ub3c4\ud574\uc8fc\uc138\uc694.",
+      emailRequired: "\uc774\uba54\uc77c\uc744 \uc785\ub825\ud574\uc8fc\uc138\uc694",
+      messageRequired: "\ud53c\ub4dc\ubc31 \ub0b4\uc6a9\uc744 \uc785\ub825\ud574\uc8fc\uc138\uc694",
+      cancel: "\ucde8\uc18c",
       close: "\ub2eb\uae30", stop: "\uc911\uc9c0", minimize: "\ucd5c\uc18c\ud654", maximize: "\ucd5c\ub300\ud654"
     },
     fr: {
@@ -226,6 +250,18 @@
       canvasFailed: "Impossible de creer le canevas",
       imageLoadFailed: "Echec du chargement de l'image",
       requestFailed: "Echec de la requete",
+      feedback: "Commentaires",
+      feedbackEmail: "Email",
+      feedbackEmailPlaceholder: "Entrez votre email",
+      feedbackMessage: "Message",
+      feedbackMessagePlaceholder: "Entrez votre retour",
+      feedbackSend: "Envoyer",
+      feedbackSending: "Envoi...",
+      feedbackSent: "Retour envoye. Merci !",
+      feedbackFailed: "Echec de l'envoi. Veuillez reessayer plus tard.",
+      emailRequired: "Veuillez entrer votre email",
+      messageRequired: "Veuillez entrer votre retour",
+      cancel: "Annuler",
       close: "Fermer", stop: "Arr\u00eater", minimize: "R\u00e9duire", maximize: "Agrandir"
     },
     de: {
@@ -252,6 +288,18 @@
       canvasFailed: "Screenshot-Canvas konnte nicht erstellt werden",
       imageLoadFailed: "Screenshot-Bild konnte nicht geladen werden",
       requestFailed: "Serviceanfrage fehlgeschlagen",
+      feedback: "Feedback",
+      feedbackEmail: "E-Mail",
+      feedbackEmailPlaceholder: "E-Mail eingeben",
+      feedbackMessage: "Nachricht",
+      feedbackMessagePlaceholder: "Feedback eingeben",
+      feedbackSend: "Senden",
+      feedbackSending: "Wird gesendet...",
+      feedbackSent: "Feedback gesendet. Danke!",
+      feedbackFailed: "Senden fehlgeschlagen. Bitte spater erneut versuchen.",
+      emailRequired: "Bitte E-Mail eingeben",
+      messageRequired: "Bitte Feedback eingeben",
+      cancel: "Abbrechen",
       close: "Schliessen", stop: "Stopp", minimize: "Minimieren", maximize: "Maximieren"
     },
     es: {
@@ -278,6 +326,18 @@
       canvasFailed: "No se pudo crear el lienzo",
       imageLoadFailed: "No se pudo cargar la imagen",
       requestFailed: "Error de solicitud",
+      feedback: "Comentarios",
+      feedbackEmail: "Email",
+      feedbackEmailPlaceholder: "Ingresa tu email",
+      feedbackMessage: "Mensaje",
+      feedbackMessagePlaceholder: "Ingresa tus comentarios",
+      feedbackSend: "Enviar",
+      feedbackSending: "Enviando...",
+      feedbackSent: "Comentarios enviados. ¡Gracias!",
+      feedbackFailed: "Error al enviar. Intenta de nuevo mas tarde.",
+      emailRequired: "Ingresa tu email",
+      messageRequired: "Ingresa tus comentarios",
+      cancel: "Cancelar",
       close: "Cerrar", stop: "Detener", minimize: "Minimizar", maximize: "Maximizar"
     },
     ru: {
@@ -299,6 +359,18 @@
       canvasFailed: "\u041d\u0435 \u0443\u0434\u0430\u043b\u043e\u0441\u044c \u0441\u043e\u0437\u0434\u0430\u0442\u044c \u0445\u043e\u043b\u0441\u0442",
       imageLoadFailed: "\u041d\u0435 \u0443\u0434\u0430\u043b\u043e\u0441\u044c \u0437\u0430\u0433\u0440\u0443\u0437\u0438\u0442\u044c \u0438\u0437\u043e\u0431\u0440\u0430\u0436\u0435\u043d\u0438\u0435",
       requestFailed: "\u041e\u0448\u0438\u0431\u043a\u0430 \u0437\u0430\u043f\u0440\u043e\u0441\u0430",
+      feedback: "\u041e\u0431\u0440\u0430\u0442\u043d\u0430\u044f \u0441\u0432\u044f\u0437\u044c",
+      feedbackEmail: "Email",
+      feedbackEmailPlaceholder: "\u0412\u0432\u0435\u0434\u0438\u0442\u0435 \u0432\u0430\u0448 email",
+      feedbackMessage: "\u0421\u043e\u043e\u0431\u0449\u0435\u043d\u0438\u0435",
+      feedbackMessagePlaceholder: "\u0412\u0432\u0435\u0434\u0438\u0442\u0435 \u0432\u0430\u0448 \u043e\u0442\u0437\u044b\u0432",
+      feedbackSend: "\u041e\u0442\u043f\u0440\u0430\u0432\u0438\u0442\u044c",
+      feedbackSending: "\u041e\u0442\u043f\u0440\u0430\u0432\u043a\u0430...",
+      feedbackSent: "\u041e\u0442\u0437\u044b\u0432 \u043e\u0442\u043f\u0440\u0430\u0432\u043b\u0435\u043d. \u0421\u043f\u0430\u0441\u0438\u0431\u043e!",
+      feedbackFailed: "\u041d\u0435 \u0443\u0434\u0430\u043b\u043e\u0441\u044c \u043e\u0442\u043f\u0440\u0430\u0432\u0438\u0442\u044c. \u041f\u043e\u043f\u0440\u043e\u0431\u0443\u0439\u0442\u0435 \u043f\u043e\u0437\u0436\u0435.",
+      emailRequired: "\u0412\u0432\u0435\u0434\u0438\u0442\u0435 \u0432\u0430\u0448 email",
+      messageRequired: "\u0412\u0432\u0435\u0434\u0438\u0442\u0435 \u0432\u0430\u0448 \u043e\u0442\u0437\u044b\u0432",
+      cancel: "\u041e\u0442\u043c\u0435\u043d\u0430",
       close: "\u0417\u0430\u043a\u0440\u044b\u0442\u044c", stop: "\u0421\u0442\u043e\u043f", minimize: "\u0421\u0432\u0435\u0440\u043d\u0443\u0442\u044c", maximize: "\u0420\u0430\u0437\u0432\u0435\u0440\u043d\u0443\u0442\u044c"
     },
     ar: {
@@ -320,6 +392,18 @@
       canvasFailed: "\u062a\u0639\u0630\u0631 \u0625\u0646\u0634\u0627\u0621 \u0644\u0648\u062d\u0629 \u0627\u0644\u0631\u0633\u0645",
       imageLoadFailed: "\u0641\u0634\u0644 \u062a\u062d\u0645\u064a\u0644 \u0627\u0644\u0635\u0648\u0631\u0629",
       requestFailed: "\u0641\u0634\u0644 \u0637\u0644\u0628 \u0627\u0644\u062e\u062f\u0645\u0629",
+      feedback: "\u0645\u0644\u0627\u062d\u0638\u0627\u062a",
+      feedbackEmail: "\u0627\u0644\u0628\u0631\u064a\u062f",
+      feedbackEmailPlaceholder: "\u0623\u062f\u062e\u0644 \u0628\u0631\u064a\u062f\u0643",
+      feedbackMessage: "\u0627\u0644\u0631\u0633\u0627\u0644\u0629",
+      feedbackMessagePlaceholder: "\u0623\u062f\u062e\u0644 \u0645\u0644\u0627\u062d\u0638\u0627\u062a\u0643",
+      feedbackSend: "\u0625\u0631\u0633\u0627\u0644",
+      feedbackSending: "\u062c\u0627\u0631\u064a \u0627\u0644\u0625\u0631\u0633\u0627\u0644...",
+      feedbackSent: "\u062a\u0645 \u0625\u0631\u0633\u0627\u0644 \u0627\u0644\u0645\u0644\u0627\u062d\u0638\u0627\u062a. \u0634\u0643\u0631\u0627\u064b!",
+      feedbackFailed: "\u0641\u0634\u0644 \u0627\u0644\u0625\u0631\u0633\u0627\u0644. \u064a\u0631\u062c\u0649 \u0625\u0639\u0627\u062f\u0629 \u0627\u0644\u0645\u062d\u0627\u0648\u0644\u0629 \u0644\u0627\u062d\u0642\u064b\u0627.",
+      emailRequired: "\u064a\u0631\u062c\u0649 \u0625\u062f\u062e\u0627\u0644 \u0628\u0631\u064a\u062f\u0643",
+      messageRequired: "\u064a\u0631\u062c\u0649 \u0625\u062f\u062e\u0627\u0644 \u0645\u0644\u0627\u062d\u0638\u0627\u062a\u0643",
+      cancel: "\u0625\u0644\u063a\u0627\u0621",
       close: "\u0625\u063a\u0644\u0627\u0642", stop: "\u0625\u064a\u0642\u0627\u0641", minimize: "\u062a\u0635\u063a\u064a\u0631", maximize: "\u062a\u0643\u0628\u064a\u0631"
     },
     hi: {
@@ -341,6 +425,18 @@
       canvasFailed: "\u0915\u0948\u0928\u0935\u093e\u0938 \u0928\u0939\u0940\u0902 \u092c\u0928\u093e \u0938\u0915\u0947",
       imageLoadFailed: "\u0907\u092e\u0947\u091c \u0932\u094b\u0921 \u0928\u0939\u0940\u0902 \u0939\u094b \u0938\u0915\u0940",
       requestFailed: "\u0938\u0947\u0935\u093e \u0905\u0928\u0941\u0930\u094b\u0927 \u0935\u093f\u092b\u0932",
+      feedback: "\u092b\u093c\u0940\u0921\u092c\u0948\u0915",
+      feedbackEmail: "\u0908\u092e\u0947\u0932",
+      feedbackEmailPlaceholder: "\u0905\u092a\u0928\u093e \u0908\u092e\u0947\u0932 \u0926\u0930\u094d\u091c \u0915\u0930\u0947\u0902",
+      feedbackMessage: "\u0938\u0902\u0926\u0947\u0936",
+      feedbackMessagePlaceholder: "\u0905\u092a\u0928\u093e \u092b\u093c\u0940\u0921\u092c\u0948\u0915 \u0926\u0930\u094d\u091c \u0915\u0930\u0947\u0902",
+      feedbackSend: "\u092d\u0947\u091c\u0947\u0902",
+      feedbackSending: "\u092d\u0947\u091c\u093e \u091c\u093e \u0930\u0939\u093e \u0939\u0948...",
+      feedbackSent: "\u092b\u093c\u0940\u0921\u092c\u0948\u0915 \u092d\u0947\u091c \u0926\u093f\u092f\u093e \u0917\u092f\u093e\u0964 \u0927\u0928\u094d\u092f\u0935\u093e\u0926!",
+      feedbackFailed: "\u092d\u0947\u091c\u0928\u0947 \u092e\u0947\u0902 \u0935\u093f\u092b\u0932\u0964 \u0915\u0943\u092a\u092f\u093e \u092c\u093e\u0926 \u092e\u0947\u0902 \u092a\u0941\u0928\u0903 \u092a\u094d\u0930\u092f\u093e\u0938 \u0915\u0930\u0947\u0902\u0964",
+      emailRequired: "\u0915\u0943\u092a\u092f\u093e \u0905\u092a\u0928\u093e \u0908\u092e\u0947\u0932 \u0926\u0930\u094d\u091c \u0915\u0930\u0947\u0902",
+      messageRequired: "\u0915\u0943\u092a\u092f\u093e \u0905\u092a\u0928\u093e \u092b\u093c\u0940\u0921\u092c\u0948\u0915 \u0926\u0930\u094d\u091c \u0915\u0930\u0947\u0902",
+      cancel: "\u0930\u0926\u094d\u0926 \u0915\u0930\u0947\u0902",
       close: "\u092c\u0902\u0926 \u0915\u0930\u0947\u0902", stop: "\u0930\u094b\u0915\u0947\u0902", minimize: "\u091b\u094b\u091f\u093e \u0915\u0930\u0947\u0902", maximize: "\u092c\u0921\u093c\u093e \u0915\u0930\u0947\u0902"
     },
   };
@@ -349,6 +445,9 @@
 
   const root = document.createElement("div");
   root.id = "glass-translate-root";
+  // 阻止 Google Chrome 原生页面翻译改写 Glass Translate 浮层的 UI 标签与内容
+  root.setAttribute("translate", "no");
+  root.classList.add("notranslate");
   root.innerHTML = `
     <div class="glass-window" role="dialog" aria-label="Glass Translate">
       <div class="glass-panel">
@@ -362,6 +461,7 @@
           </select>
           <button class="translate-button" type="button" title="" aria-label="" data-i18n="translate"></button>
           <button class="clear-button" type="button" data-i18n="clear"></button>
+          <button class="research-button" type="button" title="研究此商品">🛒</button>
           <span class="window-controls">
           <button class="minimize-button" type="button" title="" aria-label="">
             <svg viewBox="0 0 24 24" aria-hidden="true">
@@ -454,6 +554,7 @@
   const glassArea = root.querySelector("[data-glass-area]");
   const translateButton = root.querySelector(".translate-button");
   const clearButton = root.querySelector(".clear-button");
+  const researchButton = root.querySelector(".research-button");
   const minimizeButton = root.querySelector(".minimize-button");
   let preMinimizeHeight = null;
   const closeButton = root.querySelector(".close-button");
@@ -587,7 +688,6 @@
   });
 
   clearButton.addEventListener("click", () => {
-    // If translation is in progress, abort and reset everything
     if (streamAbortController) {
       streamAbortController.abort();
       streamAbortController = null;
@@ -611,6 +711,11 @@
     applyToolLanguage(targetLanguageInput.value);
   });
 
+  researchButton.addEventListener("click", () => {
+    // 购物车按钮 -> toggle 页面内「生成详情页」浮动窗口（点开 / 再点关）
+    chrome.runtime.sendMessage({ type: "GLASS_COMMERCE_TOGGLE_WINDOW" });
+  });
+
   settingsButton.addEventListener("click", () => {
     settingsPanel.hidden = !settingsPanel.hidden;
   });
@@ -622,10 +727,11 @@
   saveSettingsButton.addEventListener("click", async () => {
     const defaultLanguage = defaultLanguageInput.value;
     const defaultModel = modelInput.value;
-    const captureMode = captureModeInput.value;
+    const captureMode = defaultModeInput ? defaultModeInput.value : captureModeInput.value;
 
     await setStoredValue(DEFAULT_LANGUAGE_STORAGE_KEY, defaultLanguage);
     await setStoredValue(DEFAULT_MODEL_STORAGE_KEY, defaultModel);
+    await setStoredValue(DEFAULT_MODE_STORAGE_KEY, captureMode);
     await setStoredValue(CAPTURE_MODE_STORAGE_KEY, captureMode);
     targetLanguageInput.value = defaultLanguage;
     applyDefaultModel(defaultModel);
@@ -683,7 +789,7 @@
       glassArea.classList.remove("has-translation");
 
       const rect = glassArea.getBoundingClientRect();
-      const captureMode = captureModeInput.value;
+      const captureMode = defaultModeInput ? defaultModeInput.value : captureModeInput.value;
       const viewport = {
         width: Math.round(rect.width),
         height: Math.round(rect.height)
@@ -1462,7 +1568,7 @@
     }
 
     applyDefaultModel("gpt");
-    applyCaptureMode(captureMode || DEFAULT_CAPTURE_MODE);
+    applyCaptureMode(defaultMode || captureMode || DEFAULT_CAPTURE_MODE);
   }
 
   function applyToolLanguage(language) {
@@ -1485,7 +1591,11 @@
     closeButton.title = copy.close;
     closeButton.setAttribute("aria-label", copy.close);
     if (minimizeButton) { let key = glassWindow.classList.contains("is-minimized") ? "maximize" : "minimize"; minimizeButton.title = copy[key] || ""; minimizeButton.setAttribute("aria-label", copy[key] || ""); }
-    
+
+    // 语言变化时，广播给同页 commerce 模块（content script 之间不能直接互通，经 background 转发）
+    try {
+      chrome.runtime.sendMessage({ type: "GLASS_COMMERCE_LANGUAGE", language: currentLanguage });
+    } catch (_) {}
   }
 
   function activeText() {
@@ -1541,7 +1651,7 @@
   function buildCaptureModeOptions(selectedValue) {
     const modes = [
       { value: "text", label: "Text" },
-      { value: "ocr", label: "Image text" }
+      { value: "ocr", label: "Image (ocr)" }
     ];
 
     return modes.map((mode) => {

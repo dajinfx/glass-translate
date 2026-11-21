@@ -290,7 +290,12 @@
         document.querySelector('h1[class*="title" i]') ||
         document.querySelector('h1[class*="name" i]') ||
         document.querySelector("h1");
-      setField(product, "name", nameSel?.textContent, "dom:h1");
+      const rawName = clean(nameSel?.textContent || "");
+      // 防御：抓到的“名称”若实为说明书/手册/文档标题，则丢弃，留给后端 AI 判断
+      const isDocTitle = /(사용 설명서|설명서|매뉴얼|manual|anleitung|bedienungsanleitung|gebruiksaanwijzing|說明書|说明书|用户手册|instruction|datenblatt|datasheet|mode d'emploi)/i.test(rawName);
+      if (rawName && !isDocTitle) {
+        setField(product, "name", rawName, "dom:h1");
+      }
     }
 
     // 品牌
