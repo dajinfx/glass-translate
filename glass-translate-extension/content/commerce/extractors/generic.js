@@ -12,7 +12,11 @@
  */
 
 (function () {
-  if (window.__glassCommerceExtractor) return;
+  const GC_EXTRACTOR_VERSION = 2;
+
+  // 版本号从 manifest 依赖无法直接注入到内容脚本，用硬编码递增版本覆盖旧 tab 的旧实现。
+  // 旧 tab 里若已挂载旧版 extractor，且版本低于当前，则强制重新挂载，避免锁死旧代码。
+  if (window.__glassCommerceExtractor && window.__gcExtractorVersion === GC_EXTRACTOR_VERSION) return;
 
   function buildEmptyProduct() {
     return {
@@ -885,4 +889,5 @@
   window.__glassCommerceExtractor = extractProduct;
   window._glassCommerceExtractProduct = extractProduct;
   window.__glassCommerceCollectPageText = collectPageText;
+  window.__gcExtractorVersion = GC_EXTRACTOR_VERSION;
 })();
